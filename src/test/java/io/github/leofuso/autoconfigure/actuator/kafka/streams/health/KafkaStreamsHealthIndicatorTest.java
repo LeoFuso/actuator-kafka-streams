@@ -15,7 +15,6 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Produced;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +40,9 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpoint;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpointAutoConfiguration;
+
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsHealthIndicatorTest.IN_TOPIC;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsHealthIndicatorTest.OUT_TOPIC;
 import static org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
@@ -54,11 +56,6 @@ class KafkaStreamsHealthIndicatorTest {
     public static final String OUT_TOPIC = "out";
     private static final EmbeddedKafkaBroker embeddedKafka = EmbeddedKafkaCondition.getBroker();
     private static final String EXCEPTION_KEY = "exception";
-
-    @BeforeAll
-    public static void setUp() {
-        System.setProperty("logging.level.org.apache.kafka", "OFF");
-    }
 
     @Test
     void healthIndicatorUpTest() {
@@ -84,10 +81,29 @@ class KafkaStreamsHealthIndicatorTest {
         });
     }
 
-    private ApplicationContextRunner setup(String applicationId) {
+    @Test
+    void topologyEndpointTest() {
+        ApplicationContextRunner runner = setupTopology();
+        runner.run(context -> {
+            final TopologyEndpoint endpoint = context.getBean(TopologyEndpoint.class);
+            final String topology = endpoint.topology().trim();
+            assertThat(topology)
+                    .isEqualTo("Topologies:\n" +
+                                       "   Sub-topology: 0\n" +
+                                       "    Source: in-consumer (topics: [in])\n" +
+                                       "      --> filter\n" +
+                                       "    Processor: filter (stores: [])\n" +
+                                       "      --> out-producer\n" +
+                                       "      <-- in-consumer\n" +
+                                       "    Sink: out-producer (topic: out)\n" +
+                                       "      <-- filter");
+        });
+    }
 
+    private ApplicationContextRunner setup(String applicationId) {
         return new ApplicationContextRunner()
                 .withPropertyValues(
+                        "logging.level.org.apache.kafka=OFF",
                         "server.port=0",
                         "spring.jmx.enabled=false",
                         "spring.kafka.streams.properties.commit.interval.ms=1000",
@@ -100,6 +116,28 @@ class KafkaStreamsHealthIndicatorTest {
                                 KafkaAutoConfiguration.class,
                                 StreamBuilderFactoryConfiguration.class,
                                 KStreamApplication.class
+                        )
+                );
+    }
+
+    private ApplicationContextRunner setupTopology() {
+        return new ApplicationContextRunner()
+                .withPropertyValues(
+                        "logging.level.org.apache.kafka=OFF",
+                        "management.endpoints.web.exposure.include=topology",
+                        "server.port=0",
+                        "spring.jmx.enabled=false",
+                        "spring.kafka.streams.properties.commit.interval.ms=1000",
+                        "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
+                        "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
+                        "spring.kafka.streams.application-id=" + "ApplicationTopologyTest-abc",
+                        "spring.kafka.bootstrap-servers=" + embeddedKafka.getBrokersAsString()
+                ).withConfiguration(
+                        AutoConfigurations.of(
+                                KafkaAutoConfiguration.class,
+                                StreamBuilderFactoryConfiguration.class,
+                                KStreamApplication.class,
+                                TopologyEndpointAutoConfiguration.class
                         )
                 );
     }
