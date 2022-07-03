@@ -14,7 +14,7 @@ It is available both on JitPack's and on Maven Central.
 <dependency>
   <groupId>io.github.leofuso</groupId>
   <artifactId>actuator-kafka-streams</artifactId>
-  <version>v2.7.0-SNAPSHOT</version>
+  <version>v2.7.0.RELEASE</version>
 </dependency>
 ``` 
 
