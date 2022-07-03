@@ -9,7 +9,7 @@ plugins {
 }
 
 group 'io.github.leofuso'
-version 'v2.7.0/1.0-SNAPSHOT'
+version 'v2.7.0.1-SNAPSHOT'
 
 
 repositories {
@@ -134,8 +134,8 @@ nexusPublishing {
         sonatype {
             nexusUrl = uri('https://s01.oss.sonatype.org/service/local/')
             snapshotRepositoryUrl = uri('https://s01.oss.sonatype.org/content/repositories/snapshots/')
-            username = SonatypeUsername
-            password = SonatypePassword
+            username = SonatypeReleaseUsername
+            password = SonatypeReleasePassword
         }
     }
 }
