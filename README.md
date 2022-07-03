@@ -1,9 +1,12 @@
 
 # Actuator endpoints for Kafka Stream
-[![](https://jitpack.io/v/LeoFuso/actuator-kafka-streams.svg)](https://jitpack.io/#LeoFuso/autoconfigure-actuator-kafka)
+
+[![](https://jitpack.io/v/LeoFuso/actuator-kafka-streams.svg)](https://jitpack.io/#LeoFuso/actuator-kafka-streams)
 
 This is a simple project built on top of Spring Boot's Actuator and [Spring Boot for Apache Kafka project](https://spring.io/projects/spring-kafka/)
 that aims to provide some functionally on top of Actuator's endpoints.
+
+It was inspired by existent functionalities present in the [Spring Cloud Stream](https://spring.io/projects/spring-cloud-stream) project.
 
 ## Dependency
 It is available both on JitPack's and on Maven Central.
@@ -11,12 +14,21 @@ It is available both on JitPack's and on Maven Central.
 <dependency>
   <groupId>io.github.leofuso</groupId>
   <artifactId>actuator-kafka-streams</artifactId>
-  <version>v2.7.0-SNAPSHOT</version>
+  <version>v2.7.0/1.0-SNAPSHOT</version>
 </dependency>
 ``` 
 
-The version indicates the compatibility with the Spring Boot. In other worlds, I'll try
-to keep it up to date with other Spring Boot versions, e.g, the `v2.7.0.RELEASE` should be compatible with the Spring Boot `2.7.0` version and so on.
+The version indicates the compatibility with the Spring Boot. In other worlds, I'll try to keep it up to date with other
+Spring Boot versions, e.g, the `v2.7.0/x.x.RELEASE` should be compatible with the Spring Boot `2.7.0` version and so on.
+
+## Usage
+
+This package assumes a `StreamsBuilderFactoryBean` bean available on the classpath. Simply import it, and you can assign it to a health
+group as `kStreams`, just like any other health-check dependency.
+
+```txt
+management.endpoint.health.group.readiness.include=ping, kStreams
+```
 
 ## Endpoints
 

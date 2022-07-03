@@ -9,7 +9,7 @@ plugins {
 }
 
 group 'io.github.leofuso'
-version 'v2.7.0-SNAPSHOT'
+version 'v2.7.0/1.0-SNAPSHOT'
 
 
 repositories {
@@ -122,9 +122,13 @@ publishing {
         }
     }
 }
-signing {
-    sign publishing.publications
-}
+
+/*
+ * Commented out for JitPack's automation, necessary for Sonatype releases.
+ *
+ * signing { sign publishing.publications }
+*/
+
 nexusPublishing {
     repositories {
         sonatype {
