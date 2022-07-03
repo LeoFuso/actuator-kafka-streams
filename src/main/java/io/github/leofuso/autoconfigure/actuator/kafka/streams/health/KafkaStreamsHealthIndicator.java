@@ -26,6 +26,10 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
 
     private final StreamsBuilderFactoryBean streamsBuilderFactoryBean;
 
+    /**
+     * Create a new {@link KafkaStreamsHealthIndicator} instance.
+     * @param streamsBuilderFactoryBean used to access the underlying {@link KafkaStreams} instance.
+     */
     public KafkaStreamsHealthIndicator(StreamsBuilderFactoryBean streamsBuilderFactoryBean) {
         this.streamsBuilderFactoryBean = streamsBuilderFactoryBean;
     }
