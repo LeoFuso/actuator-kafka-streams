@@ -4,19 +4,23 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.endpoint.condition.ConditionalOnAvailableEndpoint;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
+import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_BUILDER_BEAN_NAME;
+
+@AutoConfiguration(after = {EndpointAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class})
 @ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class, Endpoint.class})
 @ConditionalOnBean(value = {StreamsBuilderFactoryBean.class})
-@AutoConfigureAfter({EndpointAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class})
 public class TopologyEndpointAutoConfiguration {
 
     @Bean
+    @DependsOn({DEFAULT_STREAMS_BUILDER_BEAN_NAME})
     @ConditionalOnAvailableEndpoint
     public TopologyEndpoint topologyEndpoint(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider) {
         final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
