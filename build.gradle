@@ -1,0 +1,141 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+    id 'org.springframework.boot' version '2.7.0' apply false
+    id 'signing'
+    id 'maven-publish'
+    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
+}
+
+group 'io.github.leofuso'
+version 'v2.7.0.1-SNAPSHOT'
+
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+    /* Spring */
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.apache.kafka:kafka-streams'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    /* Annotation Processors */
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'
+
+    /* Test */
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+apply plugin: 'io.spring.dependency-management'
+dependencyManagement {
+    imports {
+        mavenBom SpringBootPlugin.BOM_COORDINATES
+    }
+}
+
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+javadoc {
+    if(JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        sonatype(MavenPublication) {
+            from components.java
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
+            pom {
+                name = group + ':actuator-kafka-streams'
+                description = 'Spring Boot actuator endpoints for Kafka Streams.'
+                url = 'https://github.com/leofuso/actuator-kafka-streams'
+                packaging 'jar'
+                issueManagement {
+                    system = 'GitHub Issue Tracking'
+                    url = 'https://github.com/leofuso/actuator-kafka-streams/issues'
+                }
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'leofuso'
+                        name = 'Leonardo Fuso Nuzzo'
+                        email = 'leonardofusonuzzo@gmail.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/leofuso/actuator-kafka-streams.git'
+                    developerConnection = 'scm:git:git@github.com:leofuso/actuator-kafka-streams.git'
+                    url = 'https://github.com/LeoFuso/actuator-kafka-streams'
+                }
+            }
+        }
+    }
+    repositories {
+        var isSnapshot = version.endsWith('SNAPSHOT')
+        if (isSnapshot) {
+            maven {
+                url = 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+                name = 'SonatypeSnapshot'
+                credentials(PasswordCredentials.class)
+            }
+        } else {
+            maven {
+                url = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
+                name = 'SonatypeRelease'
+                credentials(PasswordCredentials.class)
+            }
+        }
+    }
+}
+
+/*
+ * Commented out for JitPack's automation, necessary for Sonatype releases.
+ *
+ * signing { sign publishing.publications }
+*/
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl = uri('https://s01.oss.sonatype.org/service/local/')
+            snapshotRepositoryUrl = uri('https://s01.oss.sonatype.org/content/repositories/snapshots/')
+            username = SonatypeReleaseUsername
+            password = SonatypeReleasePassword
+        }
+    }
+}
