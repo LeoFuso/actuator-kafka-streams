@@ -47,6 +47,9 @@ dependencyManagement {
     }
 }
 
+compileJava {
+    options.compilerArgs << '-parameters'
+}
 
 java {
     withJavadocJar()
