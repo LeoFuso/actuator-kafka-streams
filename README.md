@@ -14,12 +14,12 @@ It is available both on JitPack's and on Maven Central.
 <dependency>
   <groupId>io.github.leofuso</groupId>
   <artifactId>actuator-kafka-streams</artifactId>
-  <version>v2.7.0.RELEASE</version>
+  <version>v2.7.0.1.RELEASE</version>
 </dependency>
 ``` 
 
 The version indicates the compatibility with the Spring Boot. In other worlds, I'll try to keep it up to date with other
-Spring Boot versions, e.g, the `v2.7.x.RELEASE` should be compatible with the Spring Boot `2.7.x` version and so on.
+Spring Boot versions, e.g, the `v2.7.x.y.RELEASE` should be compatible with the Spring Boot `2.7.x` version and so on.
 
 ## Usage
 
@@ -41,7 +41,22 @@ You can access the Stream topology of your application in the following actuator
 ```
 
 You need to include the actuator and web dependencies from Spring Boot to access this endpoint.
-Further, you also need to add topology to `management.endpoints.web.exposure.include` property. By default, the topology endpoint is disabled.
+Further, you also need to add `topology` to `management.endpoints.web.exposure.include` property. By default, this endpoint is disabled.
+
+### State Store restores
+
+You can access all executed State Store restorations of your application in the following actuator endpoints.
+
+```
+/actuator/stateStoreRestore
+```
+
+```
+/actuator/stateStoreRestore/{storeNameToQuery}
+```
+
+You need to include the actuator and web dependencies from Spring Boot to access this endpoint.
+Further, you also need to add `stateStoreRestore` endpoint to `management.endpoints.web.exposure.include` property. By default, this endpoint is disabled.
 
 
 

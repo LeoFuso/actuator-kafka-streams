@@ -9,7 +9,7 @@ plugins {
 }
 
 group 'io.github.leofuso'
-version 'v2.7.0.RELEASE'
+version 'v2.7.0.1.RELEASE'
 
 
 repositories {
@@ -47,6 +47,9 @@ dependencyManagement {
     }
 }
 
+compileJava {
+    options.compilerArgs << '-parameters'
+}
 
 java {
     withJavadocJar()

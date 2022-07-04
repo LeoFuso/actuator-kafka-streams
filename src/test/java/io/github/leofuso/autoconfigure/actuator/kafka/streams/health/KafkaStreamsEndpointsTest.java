@@ -18,6 +18,9 @@ import org.apache.kafka.streams.kstream.Produced;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.autoconfigure.beans.BeansEndpointAutoConfiguration;
+import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
+import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointAutoConfiguration;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -27,8 +30,11 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.annotation.EnableKafkaStreams;
+import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
+import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -40,17 +46,18 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateStoreRestoreEndpoint;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateRestoreEndpointAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpoint;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpointAutoConfiguration;
 
-import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsHealthIndicatorTest.IN_TOPIC;
-import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsHealthIndicatorTest.OUT_TOPIC;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsEndpointsTest.IN_TOPIC;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsEndpointsTest.OUT_TOPIC;
 import static org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_BUILDER_BEAN_NAME;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @EmbeddedKafka(topics = {IN_TOPIC, OUT_TOPIC})
-class KafkaStreamsHealthIndicatorTest {
+class KafkaStreamsEndpointsTest {
 
     public static final String IN_TOPIC = "in";
     public static final String OUT_TOPIC = "out";
@@ -86,18 +93,31 @@ class KafkaStreamsHealthIndicatorTest {
         ApplicationContextRunner runner = setupTopology();
         runner.run(context -> {
             final TopologyEndpoint endpoint = context.getBean(TopologyEndpoint.class);
-            final String topology = endpoint.topology().trim();
+            final String topology = endpoint.topology()
+                                            .trim();
             assertThat(topology)
                     .isEqualTo("Topologies:\n" +
                                        "   Sub-topology: 0\n" +
                                        "    Source: in-consumer (topics: [in])\n" +
                                        "      --> filter\n" +
                                        "    Processor: filter (stores: [])\n" +
-                                       "      --> out-producer\n" +
+                                       "      --> in-store\n" +
                                        "      <-- in-consumer\n" +
+                                       "    Processor: in-store (stores: [])\n" +
+                                       "      --> in-store-stream\n" +
+                                       "      <-- filter\n" +
+                                       "    Processor: in-store-stream (stores: [])\n" +
+                                       "      --> out-producer\n" +
+                                       "      <-- in-store\n" +
                                        "    Sink: out-producer (topic: out)\n" +
-                                       "      <-- filter");
+                                       "      <-- in-store-stream");
         });
+    }
+
+    @Test
+    void restorationsEndpointTest() {
+        ApplicationContextRunner runner = setupStateRestore();
+        runner.run(context -> assertThat(context).hasSingleBean(StateStoreRestoreEndpoint.class));
     }
 
     private ApplicationContextRunner setup(String applicationId) {
@@ -111,7 +131,8 @@ class KafkaStreamsHealthIndicatorTest {
                         "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
                         "spring.kafka.streams.application-id=" + applicationId,
                         "spring.kafka.bootstrap-servers=" + embeddedKafka.getBrokersAsString()
-                ).withConfiguration(
+                )
+                .withConfiguration(
                         AutoConfigurations.of(
                                 KafkaAutoConfiguration.class,
                                 StreamBuilderFactoryConfiguration.class,
@@ -132,13 +153,38 @@ class KafkaStreamsHealthIndicatorTest {
                         "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
                         "spring.kafka.streams.application-id=" + "ApplicationTopologyTest-abc",
                         "spring.kafka.bootstrap-servers=" + embeddedKafka.getBrokersAsString()
-                ).withConfiguration(
+                )
+                .withConfiguration(
                         AutoConfigurations.of(
                                 KafkaAutoConfiguration.class,
                                 StreamBuilderFactoryConfiguration.class,
                                 KStreamApplication.class,
                                 TopologyEndpointAutoConfiguration.class
                         )
+                );
+    }
+
+    private ApplicationContextRunner setupStateRestore() {
+        return new ApplicationContextRunner()
+                .withPropertyValues(
+                        "logging.level.org.apache.kafka=OFF",
+                        "management.endpoints.web.exposure.include=stateStoreRestore",
+                        "server.port=0",
+                        "spring.jmx.enabled=false",
+                        "spring.kafka.streams.properties.commit.interval.ms=1000",
+                        "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
+                        "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
+                        "spring.kafka.streams.application-id=" + "ApplicationTopologyTest-abc",
+                        "spring.kafka.bootstrap-servers=" + embeddedKafka.getBrokersAsString()
+                )
+                .withConfiguration(
+                        AutoConfigurations.of(
+                                StateRestoreEndpointAutoConfiguration.class,
+                                KafkaAutoConfiguration.class,
+                                KafkaStreamsDefaultConfiguration.class,
+                                StreamBuilderFactoryConfiguration.class,
+                                KStreamApplication.class
+                                )
                 );
     }
 
@@ -217,25 +263,26 @@ class KafkaStreamsHealthIndicatorTest {
 
 
     @Configuration
+    @EnableKafkaStreams
     public static class StreamBuilderFactoryConfiguration {
 
-        @Bean(name = DEFAULT_STREAMS_BUILDER_BEAN_NAME)
-        public StreamsBuilderFactoryBean defaultKafkaStreamsBuilder(ObjectProvider<KafkaProperties> propertiesObjectProvider) {
+        @Bean
+        public KafkaStreamsConfiguration defaultKafkaStreamsConfig(ObjectProvider<KafkaProperties> propertiesObjectProvider) {
             final KafkaProperties properties = propertiesObjectProvider.getIfAvailable();
-            if(properties == null) {
+            if (properties == null) {
                 return null;
             }
+            return new KafkaStreamsConfiguration(properties.buildStreamsProperties());
+        }
 
-            final KafkaStreamsConfiguration configuration =
-                    new KafkaStreamsConfiguration(properties.buildStreamsProperties());
-
-            StreamsBuilderFactoryBean fb = new StreamsBuilderFactoryBean(configuration);
-            fb.setStreamsUncaughtExceptionHandler(exception -> SHUTDOWN_CLIENT);
-
-            return fb;
+        @Bean
+        public StreamsBuilderFactoryBeanConfigurer streamsUncaughtExceptionHandlerConfigurer() {
+            return fb -> fb.setStreamsUncaughtExceptionHandler(exception -> SHUTDOWN_CLIENT);
         }
 
     }
+
+
     @Configuration
     public static class KStreamApplication {
 
@@ -254,6 +301,8 @@ class KafkaStreamsHealthIndicatorTest {
                        }
                        return true;
                    }, Named.as("filter"))
+                   .toTable(Named.as("in-store"))
+                   .toStream(Named.as("in-store-stream"))
                    .to(OUT_TOPIC, Produced.as("out-producer"));
         }
 
