@@ -14,12 +14,12 @@ It is available both on JitPack's and on Maven Central.
 <dependency>
   <groupId>io.github.leofuso</groupId>
   <artifactId>actuator-kafka-streams</artifactId>
-  <version>v2.7.1.RELEASE</version>
+  <version>v2.7.0.1.RELEASE</version>
 </dependency>
 ``` 
 
 The version indicates the compatibility with the Spring Boot. In other worlds, I'll try to keep it up to date with other
-Spring Boot versions, e.g, the `v2.7.x.RELEASE` should be compatible with the Spring Boot `2.7.x` version and so on.
+Spring Boot versions, e.g, the `v2.7.x.y.RELEASE` should be compatible with the Spring Boot `2.7.x` version and so on.
 
 ## Usage
 
