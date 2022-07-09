@@ -91,6 +91,7 @@ public class ReadOnlyStateStoreEndpoint {
     public void tryInitialize() throws AlreadyBoundException, RemoteException {
 
         /* TODO This strategy will not work for remote queries. Need to fix that. */
+        /* TODO on second thought, I should go for the JMX strategy, and get done with it. */
         if (store != null) {
             return;
         }
