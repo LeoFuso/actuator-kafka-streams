@@ -9,7 +9,7 @@ plugins {
 }
 
 group 'io.github.leofuso'
-version 'v2.7.0.1.RELEASE'
+version 'v2.7.0.2-SNAPSHOT'
 
 
 repositories {
@@ -23,6 +23,7 @@ dependencies {
     implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.apache.kafka:kafka-streams'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
     /* Annotation Processors */
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'

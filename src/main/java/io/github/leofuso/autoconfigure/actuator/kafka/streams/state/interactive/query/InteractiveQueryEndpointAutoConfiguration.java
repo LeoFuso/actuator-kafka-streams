@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
@@ -18,16 +19,21 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 @AutoConfiguration(after = {EndpointAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class})
 @ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class, Endpoint.class})
 @ConditionalOnBean(value = {StreamsBuilderFactoryBean.class})
+@ConditionalOnProperty(prefix = "spring.kafka",
+                       name = {"streams.properties." + StreamsConfig.APPLICATION_SERVER_CONFIG})
 public class InteractiveQueryEndpointAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnAvailableEndpoint(endpoint = StateStoreReadOnlyEndpoint.class)
-    @ConditionalOnProperty(prefix = "spring.kafka.stream.properties." + StreamsConfig.APPLICATION_SERVER_CONFIG)
-    public <V> StateStoreReadOnlyEndpoint stateStoreReadOnlyEndpoint(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider) {
+    @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
+    public ReadOnlyStateStoreEndpoint readOnlyStateStoreEndpoint(
+            ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
+            ObjectProvider<ConversionService> conversionServiceProvider
+    ) {
         final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
-        if (factory != null) {
-            return new StateStoreReadOnlyEndpoint(factory);
+        final ConversionService conversionService = conversionServiceProvider.getIfAvailable();
+        if (factory != null && conversionService != null) {
+            return new ReadOnlyStateStoreEndpoint(factory, conversionService);
         }
         return null;
     }

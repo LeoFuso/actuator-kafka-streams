@@ -12,27 +12,16 @@ import java.util.Optional;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
-import org.springframework.beans.factory.SmartInitializingSingleton;
 
-public interface RemoteQueryableStore<K, V, R extends RemoteQueryableStore<K, V, R>>
-        extends Serializable, Remote, SmartInitializingSingleton {
+public interface RemoteQueryableStore<R extends RemoteQueryableStore<R>> extends Serializable, Remote {
 
-    static <K, V> RemoteQueryableReadOnlyKeyValueStore<K, V> readOnly(StreamsConfig config, KafkaStreams streams) {
+    static RemoteQueryableReadOnlyKeyValueStore readOnly(StreamsConfig config, KafkaStreams streams) {
         return RemoteQueryableReadOnlyKeyValueStore.instantiate(config, streams);
     }
 
-    @Override
-    default void afterSingletonsInstantiated() {
-        try {
-            bind();
-        } catch (AlreadyBoundException | RemoteException e) {
-            throw new RuntimeException(e);
-        }
+    default void initialize() throws AlreadyBoundException, RemoteException {
+        bind();
     }
-
-    String name();
-
-    HostInfo info();
 
     default void bind() throws AlreadyBoundException, RemoteException {
         final HostInfo info = info();
@@ -43,20 +32,24 @@ public interface RemoteQueryableStore<K, V, R extends RemoteQueryableStore<K, V,
         registry.bind(name, this);
     }
 
+    HostInfo info();
+
+    String name();
+
     default Optional<R> lookup(HostInfo info) throws NotBoundException, RemoteException {
-            final HostInfo localInfo = this.info();
-            final boolean localLookup = localInfo.equals(info);
-            if (localLookup) {
-                final R store = doLookUp();
-                return Optional.ofNullable(store);
-            }
-
-            final String host = info.host();
-            final int port = info.port();
-
-            final Registry remoteRegistry = LocateRegistry.getRegistry(host, port);
-            final R store = doLookUp(remoteRegistry);
+        final HostInfo localInfo = this.info();
+        final boolean localLookup = localInfo.equals(info);
+        if (localLookup) {
+            final R store = doLookUp();
             return Optional.ofNullable(store);
+        }
+
+        final String host = info.host();
+        final int port = info.port();
+
+        final Registry remoteRegistry = LocateRegistry.getRegistry(host, port);
+        final R store = doLookUp(remoteRegistry);
+        return Optional.ofNullable(store);
     }
 
 
@@ -71,6 +64,5 @@ public interface RemoteQueryableStore<K, V, R extends RemoteQueryableStore<K, V,
         final String name = name();
         return (R) registry.lookup(name);
     }
-
 
 }
