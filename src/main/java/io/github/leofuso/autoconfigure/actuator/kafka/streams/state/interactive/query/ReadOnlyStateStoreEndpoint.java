@@ -7,102 +7,121 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Properties;
+import java.util.Optional;
 
-import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
-import org.apache.kafka.streams.StreamsConfig;
 import org.apache.logging.log4j.util.Strings;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.annotation.Selector;
 import org.springframework.core.convert.ConversionService;
-import org.springframework.kafka.config.StreamsBuilderFactoryBean;
+import org.springframework.core.convert.ConverterNotFoundException;
 
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.ReadOnlyStateStoreEndpoint.ENDPOINT;
 
 /**
  * Actuator endpoint for querying {@link org.apache.kafka.streams.state.ReadOnlyKeyValueStore ReadOnlyKeyValue} stores.
  */
-@Endpoint(id = "readyOnlyStateStore")
+@Endpoint(id = ENDPOINT)
 public class ReadOnlyStateStoreEndpoint {
 
-    private final StreamsBuilderFactoryBean factory;
-    private final ConversionService converter;
+    public static final String ENDPOINT = "readonlystatestore";
+    private static final String ERROR_MESSAGE_KEY = "message";
 
-    private RemoteQueryableReadOnlyKeyValueStore store;
+    private final BeanFactory factory;
 
-    public ReadOnlyStateStoreEndpoint(final StreamsBuilderFactoryBean factory, ConversionService conversionService) {
-        this.factory = Objects.requireNonNull(factory, "Attribute [factory] is required.");
-        this.converter = Objects.requireNonNull(conversionService, "Attribute [conversionService] is required.");
+    private RemoteQueryableReadOnlyKeyValueStore readOnlyKeyValueStore;
+
+    public ReadOnlyStateStoreEndpoint(final BeanFactory factory) {
+        this.factory = Objects.requireNonNull(factory, "BeanFactory [factory] is required.");
     }
 
     /**
-     * @param storeName storeName of the {@link org.apache.kafka.streams.state.ReadOnlyKeyValueStore store} to query
-     *                  to.
+     * Query for a value associated with given key and store.
+     *
+     * @param storeName of the {@link org.apache.kafka.streams.state.ReadOnlyKeyValueStore queryable store}.
      * @param key       to query for.
-     * @param keyType   the key type. Restricted by {@link org.apache.kafka.common.serialization.Serdes serdes}
-     *                  supported types.
-     * @param <K>       the key type. Restricted by {@link org.apache.kafka.common.serialization.Serdes serdes}
-     *                  supported types.
-     * @return the value associated with the key, if any. Will encapsulate
-     * {@link Exception#getMessage() exception's messages} into resulting {@link Map map}.
+     * @param keyClass  the key class. Restricted to supported
+     *                  {@link org.apache.kafka.common.serialization.Serdes serdes} types.
+     * @return the value associated with the key, if any. Will encapsulate eventual
+     * {@link Exception#getMessage() exception's messages} into a response object.
+     *
+     * @implNote Due to the nature of the query Api this is a relative expensive operation and should be invoked with
+     * care. All disposable objects will only persist during the lifecycle of this query to save on resources.
      */
     @ReadOperation
-    public <K> Map<String, String> find(@Selector String storeName, @Selector String key, @Nullable Class<K> keyType) {
-        // TODO will need to create a WebExtension to support query parameters, sadly.
+    public Map<String, String> find(@Selector String storeName, @Selector String key, @Nullable String keyClass) {
+
         try {
-            if (keyType != null) {
-                final K typedKey = converter.convert(key, keyType);
-                return doFindByKey(typedKey, storeName);
+            initialize();
+            if (keyClass != null) {
+                final Object resolvedKey = resolveKeyUsingKeyClass(key, keyClass);
+                return doFindByKey(resolvedKey, storeName);
             }
             return doFindByKey(key, storeName);
         } catch (RuntimeException ex) {
-            return Map.of(key, ex.getMessage());
+            return Map.of(ERROR_MESSAGE_KEY, ex.getMessage());
+        }
+    }
+
+    public Object resolveKeyUsingKeyClass(String rawKey, String keyClass) {
+        try {
+
+            final Class<?> actualKeyClass = Class.forName(keyClass);
+
+            /* Lazy invocation */
+            final ConversionService converter = factory.getBean(ConversionService.class);
+            return converter.convert(rawKey, actualKeyClass);
+
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (ConverterNotFoundException ex) {
+            final String message =
+                    "Please make sure the right Converter is available in the classpath." +
+                            " Alternatively, you can implement your own." + ex.getMessage();
+            throw new RuntimeException(message);
         }
     }
 
     public <K> Map<String, String> doFindByKey(K key, String storeName) {
-        return ofNullable(store)
-                .or(() -> {
-                    try {
-                        tryInitialize();
-                        return of(store);
-                    } catch (AlreadyBoundException | RemoteException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .flatMap(store -> store.queryMetadataForKey(key, storeName))
-                .map(KeyQueryMetadata::activeHost)
-                .flatMap(info -> {
-                    try {
-                        return store.lookup(info);
-                    } catch (NotBoundException | RemoteException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .flatMap(remote -> remote.findByKey(key, storeName))
-                .map(Object::toString)
-                .map(value -> Map.of(key.toString(), value))
-                .orElseGet(() -> Map.of(key.toString(), Strings.EMPTY));
+        return Optional.ofNullable(readOnlyKeyValueStore)
+                       .or(() -> {
+                           try {
+                               initialize();
+                               return Optional.of(readOnlyKeyValueStore);
+                           } catch (AlreadyBoundException | RemoteException e) {
+                               throw new RuntimeException(e);
+                           }
+                       })
+                       .flatMap(store -> store.queryMetadataForKey(key, storeName))
+                       .map(KeyQueryMetadata::activeHost)
+                       .flatMap(info -> {
+                           try {
+                               return readOnlyKeyValueStore.lookup(info);
+                           } catch (NotBoundException | RemoteException e) {
+                               throw new RuntimeException(e);
+                           }
+                       })
+                       .flatMap(remote -> remote.findByKey(key, storeName))
+                       .map(Object::toString)
+                       .map(value -> Map.of(key.toString(), value))
+                       .orElseGet(() -> Map.of(key.toString(), Strings.EMPTY));
     }
 
-    public void tryInitialize() throws AlreadyBoundException, RemoteException {
-
-        /* TODO This strategy will not work for remote queries. Need to fix that. */
-        /* TODO on second thought, I should go for the JMX strategy, and get done with it. */
-        if (store != null) {
+    /**
+     * We try to initialize the {@link RemoteQueryableStore store} lazily. It's possible that this operation will fail
+     * indefinitely due to a simple miss configuration, or any other factor that can make a
+     * {@link org.apache.kafka.streams.KafkaStreams Stream} unavailable.
+     * <p>
+     * Since most of those validations only happens after or during the App initialization, we cannot associate the
+     * lifecycle of this {@link Endpoint endpoint} to it.
+     */
+    public void initialize() {
+        if (readOnlyKeyValueStore != null) {
             return;
         }
-
-        final Properties properties = factory.getStreamsConfiguration();
-        final KafkaStreams streams = factory.getKafkaStreams();
-
-        final StreamsConfig streamsConfig = new StreamsConfig(Objects.requireNonNull(properties));
-        final RemoteQueryableReadOnlyKeyValueStore store = RemoteQueryableStore.readOnly(streamsConfig, streams);
-        store.initialize();
-        this.store = store;
+        this.readOnlyKeyValueStore = RemoteQueryableStore.localReadOnly(factory);
     }
 
 }

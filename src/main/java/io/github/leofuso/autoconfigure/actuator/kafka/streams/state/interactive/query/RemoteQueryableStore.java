@@ -9,14 +9,18 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Optional;
 
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 
 public interface RemoteQueryableStore<R extends RemoteQueryableStore<R>> extends Serializable, Remote {
 
-    static RemoteQueryableReadOnlyKeyValueStore readOnly(StreamsConfig config, KafkaStreams streams) {
-        return RemoteQueryableReadOnlyKeyValueStore.instantiate(config, streams);
+    static RemoteQueryableReadOnlyKeyValueStore localReadOnly(BeanFactory factory) {
+        return RemoteQueryableReadOnlyKeyValueStore.local(factory);
+    }
+
+    static RemoteQueryableReadOnlyKeyValueStore remoteReadOnly(BeanFactory factory) {
+        return RemoteQueryableReadOnlyKeyValueStore.local(factory);
     }
 
     default void initialize() throws AlreadyBoundException, RemoteException {
@@ -37,6 +41,10 @@ public interface RemoteQueryableStore<R extends RemoteQueryableStore<R>> extends
     String name();
 
     default Optional<R> lookup(HostInfo info) throws NotBoundException, RemoteException {
+
+        // TODO this lookup method should be a factory, holding all types of remote stores, and depending on the
+        // host info, return either the local instance or the remote one.
+
         final HostInfo localInfo = this.info();
         final boolean localLookup = localInfo.equals(info);
         if (localLookup) {
@@ -44,6 +52,7 @@ public interface RemoteQueryableStore<R extends RemoteQueryableStore<R>> extends
             return Optional.ofNullable(store);
         }
 
+        final RestTemplateBuilder builder = beanFactory().getBean(RestTemplateBuilder.class);
         final String host = info.host();
         final int port = info.port();
 
@@ -52,6 +61,7 @@ public interface RemoteQueryableStore<R extends RemoteQueryableStore<R>> extends
         return Optional.ofNullable(store);
     }
 
+    BeanFactory beanFactory();
 
     private R doLookUp() throws RemoteException, NotBoundException {
         final int port = info().port();

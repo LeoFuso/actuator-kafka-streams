@@ -1,6 +1,7 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query;
 
 import org.apache.kafka.streams.StreamsConfig;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.endpoint.condition.ConditionalOnAvailableEndpoint;
@@ -26,14 +27,10 @@ public class InteractiveQueryEndpointAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
-    public ReadOnlyStateStoreEndpoint readOnlyStateStoreEndpoint(
-            ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
-            ObjectProvider<ConversionService> conversionServiceProvider
-    ) {
-        final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
-        final ConversionService conversionService = conversionServiceProvider.getIfAvailable();
-        if (factory != null && conversionService != null) {
-            return new ReadOnlyStateStoreEndpoint(factory, conversionService);
+    public ReadOnlyStateStoreEndpoint readOnlyStateStoreEndpoint(ObjectProvider<BeanFactory> factoryProvider) {
+        final BeanFactory factory = factoryProvider.getIfAvailable();
+        if (factory != null) {
+            return new ReadOnlyStateStoreEndpoint(factory);
         }
         return null;
     }
