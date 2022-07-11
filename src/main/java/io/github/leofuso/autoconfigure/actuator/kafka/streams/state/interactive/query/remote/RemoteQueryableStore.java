@@ -23,7 +23,7 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
         try {
             final String name = reference();
             final HostInfo self = self();
-            final Registry registry = getRegistry(self);
+            final Registry registry = locateOrCreateRegistry(self);
 
             final int port = self.port();
             UnicastRemoteObject.exportObject(this, port);
@@ -49,7 +49,13 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
      */
     HostInfo self();
 
-    default Registry getRegistry(HostInfo host) {
+    /**
+     * Locate or create the RMI registry for this store.
+     * @param host carrying the registry port to use
+     * @return the RMI registry
+     * @throws RuntimeException if the registry couldn't be located or created.
+     */
+    default Registry locateOrCreateRegistry(HostInfo host) {
         final int port = host.port();
         synchronized (LocateRegistry.class) {
             try {
@@ -66,9 +72,12 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
         }
     }
 
+    /**
+     * Unbind the RMI service from the registry on bean factory shutdown.
+     */
     default void destroy() {
         try {
-            final Registry registry = getRegistry(self());
+            final Registry registry = locateOrCreateRegistry(self());
             registry.unbind(reference());
         } catch (NotBoundException | RemoteException e) {
             throw new RuntimeException(e);
