@@ -1,0 +1,103 @@
+package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.remote;
+
+import java.io.Serializable;
+import java.rmi.NoSuchObjectException;
+import java.rmi.NotBoundException;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+
+import org.apache.kafka.streams.state.HostInfo;
+
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.QueryableStore;
+
+
+public interface RemoteQueryableStore extends QueryableStore, Serializable, Remote {
+
+    /**
+     * Used to bind this {@link Remote instance} to a {@link java.rmi.registry.Registry registry}.
+     */
+    default void initialize() {
+        try {
+            final String name = reference();
+            final HostInfo self = self();
+            final Registry registry = getRegistry(self);
+
+            final int port = self.port();
+            UnicastRemoteObject.exportObject(this, port);
+
+            /* Always rebinding, since we don't need to worry about stale references. */
+            registry.rebind(name, this);
+
+        } catch (RemoteException e) {
+            try {
+                UnicastRemoteObject.unexportObject(this, true);
+            } catch (NoSuchObjectException ignored) { /* Swallowing exception */ }
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * @return the name to associate with this {@link Remote} reference.
+     */
+    String reference();
+
+    /**
+     * @return a {@link HostInfo host} that points to itself.
+     */
+    HostInfo self();
+
+    default Registry getRegistry(HostInfo host) {
+        final int port = host.port();
+        synchronized (LocateRegistry.class) {
+            try {
+                Registry registry = LocateRegistry.getRegistry(port);
+                registry.list();
+                return registry;
+            } catch (RemoteException ex) {
+                try {
+                    return LocateRegistry.createRegistry(port);
+                } catch (RemoteException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+
+    default void destroy() {
+        try {
+            final Registry registry = getRegistry(self());
+            registry.unbind(reference());
+        } catch (NotBoundException | RemoteException e) {
+            throw new RuntimeException(e);
+        } finally {
+            try {
+                UnicastRemoteObject.unexportObject(this, true);
+            } catch (NoSuchObjectException ignored) { /* Swallowing exception */ }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    default <R extends RemoteQueryableStore> R stub(HostInfo host) {
+        final boolean unnecessaryStub = self().equals(host);
+        if (unnecessaryStub) {
+            return (R) this;
+        }
+
+        try {
+            final String hostname = host.host();
+            final int port = host.port();
+
+            final Registry registry = LocateRegistry.getRegistry(hostname, port);
+
+            final String reference = reference();
+            return (R) registry.lookup(reference);
+
+        } catch (RemoteException | NotBoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+}

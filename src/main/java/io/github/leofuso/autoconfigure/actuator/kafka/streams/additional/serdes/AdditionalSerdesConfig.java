@@ -8,6 +8,7 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.serialization.Serde;
+import org.springframework.core.ResolvableType;
 
 import static org.apache.kafka.common.config.ConfigDef.Importance;
 import static org.apache.kafka.common.config.ConfigDef.Type;
@@ -24,7 +25,8 @@ public class AdditionalSerdesConfig extends AbstractConfig {
 
     public static final String ADDITIONAL_SERDES_CONFIG = "additional.serdes";
     public static final String ADDITIONAL_SERDES_DOC =
-            "A comma delimited list containing the fully qualified name of all additional serdes.";
+            "A comma delimited list containing the fully qualified name of all additional serdes in which its " +
+            "lifecycle can be managed by the framework.";
 
     public static final String ADDITIONAL_SERDES_PROPERTIES_PREFIX = ADDITIONAL_SERDES_CONFIG + "properties";
 
@@ -56,36 +58,44 @@ public class AdditionalSerdesConfig extends AbstractConfig {
      * Prefix a property with {@link #ADDITIONAL_SERDES_PROPERTIES_PREFIX}. This is used to isolate
      * {@link AdditionalSerdesConfig additional serdes configs} from other client configs.
      *
-     * @param additionalSerdeProperty the producer property to be masked
-     * @return ADDITIONAL_SERDES_PROPERTIES_PREFIX + {@code additionalSerdeProperty}
+     * @param property the {@link Serde} property to be masked
+     * @return ADDITIONAL_SERDES_PROPERTIES_PREFIX + {@code property}
      */
-    @SuppressWarnings("WeakerAccess")
-    public static String additionalSerdesPropertiesPrefix(final String additionalSerdeProperty) {
-        return ADDITIONAL_SERDES_PROPERTIES_PREFIX + additionalSerdeProperty;
+    public static String additionalSerdesPropertiesPrefix(final String property) {
+        return ADDITIONAL_SERDES_PROPERTIES_PREFIX + property;
     }
 
     /**
-     * Return an {@link Serde#configure(Map, boolean) configured} instance of given Serde class.
+     * Returns a {@link Serde#configure(Map, boolean) configured} instance of given Serde class.
      *
-     * @return a configured instance of given Serde class.
+     * @return a {@link Serde#configure(Map, boolean) configured} instance of given Serde class.
      */
-    @SuppressWarnings("WeakerAccess")
     public <T, S extends Serde<T>> Serde<T> serde(Class<S> serdeClass) {
         final String name = serdeClass.getName();
         try {
-
-            final Map<String, Object> overrideProperties =
-                    valuesWithPrefixOverride(ADDITIONAL_SERDES_PROPERTIES_PREFIX);
-
-            return getConfiguredInstance(name, serdeClass, overrideProperties);
-
+            final Map<String, Object> properties = valuesWithPrefixOverride(ADDITIONAL_SERDES_PROPERTIES_PREFIX);
+            return getConfiguredInstance(name, serdeClass, properties);
         } catch (Exception e) {
             throw new ConfigException("Failed to configure Serde [" + name + "]", e);
         }
     }
 
     /**
-     * Validation for a list of fully qualified class names that should implement {@link Serde Serde}.
+     * Returns the underlying {@link Serde serde} type.
+     *
+     * @return the underlying {@link Serde serde} type.
+     */
+    public <T, S extends Serde<T>> Class<T> serdeType(Serde<T> serde) {
+        final int serdeTypeIndex = 0;
+        final ResolvableType resolvableType = ResolvableType.forInstance(serde).as(Serde.class);
+
+        @SuppressWarnings("unchecked")
+        final Class<T> serdeType = (Class<T>) resolvableType.resolveGeneric(serdeTypeIndex);
+        return serdeType;
+    }
+
+    /**
+     * Validation for a list of fully qualified class names. Each class is expected to implement {@link Serde Serde}.
      */
     public static class ValidSerdesClassList implements Validator {
 
