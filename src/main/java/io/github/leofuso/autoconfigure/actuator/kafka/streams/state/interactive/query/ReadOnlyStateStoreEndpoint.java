@@ -3,11 +3,11 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive
 import javax.annotation.Nullable;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.logging.log4j.util.Strings;
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.annotation.Selector;
@@ -24,13 +24,14 @@ public class ReadOnlyStateStoreEndpoint {
 
     private static final String ERROR_MESSAGE_KEY = "message";
 
-    private final BeanFactory factory;
+    private final InteractiveQueryService service;
+    private final ConversionService converter;
 
-    private RemoteQueryableReadOnlyKeyValueStore readOnlyKeyValueStore;
-
-    public ReadOnlyStateStoreEndpoint(final BeanFactory factory) {
-        this.factory = Objects.requireNonNull(factory, "BeanFactory [factory] is required.");
+    public ReadOnlyStateStoreEndpoint(final InteractiveQueryService service, final ConversionService converter) {
+        this.service = service;
+        this.converter = converter;
     }
+
 
     /**
      * Query for a value associated with given key and store.
@@ -46,9 +47,17 @@ public class ReadOnlyStateStoreEndpoint {
      * care. All disposable objects will only persist during the lifecycle of this query to save on resources.
      */
     @ReadOperation
-    public Map<String, String> find(@Selector String storeName, @Selector String key, @Nullable String keyClass) {
+    public Map<String, String> find(@Selector String storeName,
+                                    @Selector String key,
+                                    @Nullable String keyClass,
+                                    @Nullable String serdeClass) {
 
         try {
+            if(serdeClass != null) {
+                final Class<?> actualSerdeClass = resolveSerdeClass(serdeClass);
+                final Object resolvedKey = resolveKeyUsingKeyClass(key, keyClass);
+                return doFindByKey(resolvedKey, actualSerdeClass, storeName);
+            }
             if (keyClass != null) {
                 final Object resolvedKey = resolveKeyUsingKeyClass(key, keyClass);
                 return doFindByKey(resolvedKey, storeName);
@@ -62,13 +71,8 @@ public class ReadOnlyStateStoreEndpoint {
 
     public Object resolveKeyUsingKeyClass(String rawKey, String keyClass) {
         try {
-
             final Class<?> actualKeyClass = Class.forName(keyClass);
-
-            /* Lazy invocation */
-            final ConversionService converter = factory.getBean(ConversionService.class);
             return converter.convert(rawKey, actualKeyClass);
-
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         } catch (ConverterNotFoundException ex) {
@@ -79,12 +83,34 @@ public class ReadOnlyStateStoreEndpoint {
         }
     }
 
+    public Class<?> resolveSerdeClass(String serdeClass) {
+        try {
+            return Class.forName(serdeClass);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public <K> Map<String, String> doFindByKey(K key, String storeName) {
-        return Optional.ofNullable(readOnlyKeyValueStore)
-                       .map(store -> store.findByKey(key, storeName))
-                       .map(Object::toString)
-                       .map(value -> Map.of(key.toString(), value))
-                       .orElseGet(() -> Map.of(key.toString(), Strings.EMPTY));
+
+        final Optional<RemoteQueryableReadOnlyKeyValueStore> store =
+                service.store(key, storeName, QueryableStoreTypes.keyValueStore());
+
+        return store.map(s -> s.findByKey(key, storeName))
+                    .map(Object::toString)
+                    .map(value -> Map.of(key.toString(), value))
+                    .orElseGet(() -> Map.of(key.toString(), Strings.EMPTY));
+    }
+
+    public <K, S extends Serde<K>> Map<String, String> doFindByKey(K key, Class<S> serdeClass, String storeName) {
+
+        final Optional<RemoteQueryableReadOnlyKeyValueStore> store =
+                service.store(key, serdeClass, storeName, QueryableStoreTypes.keyValueStore());
+
+        return store.map(s -> s.findByKey(key, storeName))
+                    .map(Object::toString)
+                    .map(value -> Map.of(key.toString(), value))
+                    .orElseGet(() -> Map.of(key.toString(), Strings.EMPTY));
     }
 
 }

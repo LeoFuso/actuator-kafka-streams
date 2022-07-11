@@ -14,6 +14,9 @@ import org.apache.kafka.streams.state.HostInfo;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.QueryableStore;
 
 
+/**
+ * Same as {@link QueryableStore}, but with the capability of being queried through a {@link Registry known registry}.
+ */
 public interface RemoteQueryableStore extends QueryableStore, Serializable, Remote {
 
     /**
@@ -88,6 +91,11 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
         }
     }
 
+    /**
+     * @param host used to locate the {@link RemoteQueryableStore store}.
+     * @param <R> the type of the wanted {@link RemoteQueryableStore store}.
+     * @return a stub for this {@link RemoteQueryableStore store}, or the real one, if a proxy creation is unnecessary.
+     */
     @SuppressWarnings("unchecked")
     default <R extends RemoteQueryableStore> R stub(HostInfo host) {
         final boolean unnecessaryStub = self().equals(host);

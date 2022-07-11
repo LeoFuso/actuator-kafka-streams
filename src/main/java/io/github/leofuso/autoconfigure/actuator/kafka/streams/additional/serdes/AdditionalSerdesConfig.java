@@ -85,7 +85,7 @@ public class AdditionalSerdesConfig extends AbstractConfig {
      *
      * @return the underlying {@link Serde serde} type.
      */
-    public <T, S extends Serde<T>> Class<T> serdeType(Serde<T> serde) {
+    public static <T, S extends Serde<T>> Class<T> serdeType(Serde<T> serde) {
         final int serdeTypeIndex = 0;
         final ResolvableType resolvableType = ResolvableType.forInstance(serde).as(Serde.class);
 

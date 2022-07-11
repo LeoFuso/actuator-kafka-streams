@@ -30,7 +30,7 @@ public class InteractiveQueryEndpointAutoConfiguration {
     public ReadOnlyStateStoreEndpoint readOnlyStateStoreEndpoint(ObjectProvider<BeanFactory> factoryProvider) {
         final BeanFactory factory = factoryProvider.getIfAvailable();
         if (factory != null) {
-            return new ReadOnlyStateStoreEndpoint(factory);
+            return null;
         }
         return null;
     }
