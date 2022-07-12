@@ -1,6 +1,5 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.remote;
 
-import java.rmi.Remote;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -17,7 +16,8 @@ import static org.apache.kafka.streams.StoreQueryParameters.fromNameAndType;
 import static org.apache.kafka.streams.state.QueryableStoreTypes.keyValueStore;
 
 /**
- * A {@link RemoteQueryableReadOnlyKeyValueStore} that offers local query functionality.
+ * A {@link RemoteQueryableReadOnlyKeyValueStore} that offers local query functionality and can be accessed through a
+ * {@link java.rmi.Remote RMI} interface.
  */
 public class LocalQueryableReadOnlyKeyValueStore implements RemoteQueryableReadOnlyKeyValueStore {
 
@@ -54,27 +54,22 @@ public class LocalQueryableReadOnlyKeyValueStore implements RemoteQueryableReadO
     }
 
     @Override
-    public boolean equals(final Object other) {
-        if (this == other) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         }
-        if (!(other instanceof final LocalQueryableReadOnlyKeyValueStore that)) {
+        if (!(o instanceof LocalQueryableReadOnlyKeyValueStore)) {
             return false;
         }
+        final LocalQueryableReadOnlyKeyValueStore that = (LocalQueryableReadOnlyKeyValueStore) o;
         return reference().equals(that.reference());
     }
 
-    /**
-     * @return the name to associate with the {@link Remote} reference.
-     */
     @Override
     public String reference() {
         return RemoteQueryableReadOnlyKeyValueStore.class.getName();
     }
 
-    /**
-     * @return a {@link HostInfo host} that points to itself.
-     */
     @Override
     public HostInfo self() {
         return self;

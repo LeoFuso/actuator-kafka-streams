@@ -2,10 +2,12 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive
 
 import java.util.Optional;
 
-import org.apache.kafka.streams.state.HostInfo;
+import org.apache.kafka.streams.errors.InvalidStateStoreException;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.QueryableStore;
-
+/**
+ * A simplified and {@link RemoteQueryableStore remote} implementation of a
+ * {@link org.apache.kafka.streams.state.ReadOnlyKeyValueStore ReadOnlyKeyValueStore}.
+ */
 public interface RemoteQueryableReadOnlyKeyValueStore extends RemoteQueryableStore {
 
     @Override
@@ -13,9 +15,18 @@ public interface RemoteQueryableReadOnlyKeyValueStore extends RemoteQueryableSto
         return RemoteQueryableReadOnlyKeyValueStore.class.getName();
     }
 
-    @Override
-    HostInfo self();
-
+    /**
+     * Get the value corresponding to this key.
+     *
+     * @param key       The key to fetch
+     * @param storeName the store to query to.
+     * @param <K>       the key type.
+     * @param <V>       the value type.
+     * @return The value or null if no value is found.
+     *
+     * @throws NullPointerException       If null is used for key.
+     * @throws InvalidStateStoreException if the store is not initialized
+     */
     <K, V> Optional<V> findByKey(K key, String storeName);
 
 }
