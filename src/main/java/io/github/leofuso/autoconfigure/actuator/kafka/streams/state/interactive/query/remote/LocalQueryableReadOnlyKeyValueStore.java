@@ -32,7 +32,7 @@ public class LocalQueryableReadOnlyKeyValueStore implements RemoteQueryableReadO
      *
      * @param factory used to extract the necessary configurations to a new instance.
      */
-    LocalQueryableReadOnlyKeyValueStore(final StreamsBuilderFactoryBean factory) {
+    public LocalQueryableReadOnlyKeyValueStore(final StreamsBuilderFactoryBean factory) {
         this.factory = Objects.requireNonNull(factory, "StreamsBuilderFactoryBean [factory] is required.");
         this.self =
                 Optional.of(factory)
