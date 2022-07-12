@@ -66,8 +66,28 @@ public class AdditionalSerdesConfig extends AbstractConfig {
     }
 
     /**
+     * Returns the underlying {@link Serde serde} type.
+     *
+     * @param serde That needs to have its underlying type extracted.
+     * @param <T>   the resulting underlying type.
+     * @return the underlying {@link Serde serde} type.
+     */
+    public static <T> Class<T> serdeType(Serde<T> serde) {
+        final int serdeTypeIndex = 0;
+        final ResolvableType resolvableType = ResolvableType.forInstance(serde)
+                                                            .as(Serde.class);
+
+        @SuppressWarnings("unchecked")
+        final Class<T> serdeType = (Class<T>) resolvableType.resolveGeneric(serdeTypeIndex);
+        return serdeType;
+    }
+
+    /**
      * Returns a {@link Serde#configure(Map, boolean) configured} instance of given Serde class.
      *
+     * @param serdeClass the {@link Class} to instantiate and configure.
+     * @param <S>        the resulting {@link Serde} type.
+     * @param <T>        the underlying {@link Serde} type.
      * @return a {@link Serde#configure(Map, boolean) configured} instance of given Serde class.
      */
     public <T, S extends Serde<T>> Serde<T> serde(Class<S> serdeClass) {
@@ -78,20 +98,6 @@ public class AdditionalSerdesConfig extends AbstractConfig {
         } catch (Exception e) {
             throw new ConfigException("Failed to configure Serde [" + name + "]", e);
         }
-    }
-
-    /**
-     * Returns the underlying {@link Serde serde} type.
-     *
-     * @return the underlying {@link Serde serde} type.
-     */
-    public static <T> Class<T> serdeType(Serde<T> serde) {
-        final int serdeTypeIndex = 0;
-        final ResolvableType resolvableType = ResolvableType.forInstance(serde).as(Serde.class);
-
-        @SuppressWarnings("unchecked")
-        final Class<T> serdeType = (Class<T>) resolvableType.resolveGeneric(serdeTypeIndex);
-        return serdeType;
     }
 
     /**

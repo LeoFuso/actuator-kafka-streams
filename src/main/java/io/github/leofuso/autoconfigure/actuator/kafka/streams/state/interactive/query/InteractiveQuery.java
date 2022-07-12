@@ -11,8 +11,8 @@ import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.
 /**
  * Provides an easy Api to execute queries remotely, without worrying about the lifecycle of all the required
  * components.
- *
- * @implNote Due to the nature of the query Api this is a relative expensive operation and should be invoked with care.
+ * <p>
+ * Due to the nature of the query Api this is a relative expensive operation and should be invoked with care.
  */
 public interface InteractiveQuery {
 
@@ -26,12 +26,14 @@ public interface InteractiveQuery {
     <K> Optional<HostInfo> findHost(K key, Serializer<K> serializer, String storeName);
 
     /**
-     * @param host used for lookup operations, if necessary.
-     * @return a {@link QueryableStore QueryableStore} associated with given {@link HostInfo host}. Can be a
+     * @param host      used for lookup operations, if necessary.
+     * @param storeType used to compatibility check against the {@link RemoteQueryableStore store} candidates.
+     * @param <R>       the {@link QueryableStore} type.
+     * @return a {@link QueryableStore} associated with given {@link HostInfo host}. Can be a
      * {@link RemoteQueryableStore local}, if the given {@link HostInfo host} points to itself, or a
      * {@link RemoteQueryableStore remote} one, if the given {@link HostInfo host} points to somewhere else.
      */
-    <T, S extends RemoteQueryableStore> Optional<S> findCompatibleStore(HostInfo host, QueryableStoreType<T> storeType);
+    <R extends RemoteQueryableStore> Optional<R> findCompatibleStore(HostInfo host, QueryableStoreType<?> storeType);
 
     /**
      * Will locate and execute a {@link Action#getQuery() query} on the specified {@link RemoteQueryableStore store}.

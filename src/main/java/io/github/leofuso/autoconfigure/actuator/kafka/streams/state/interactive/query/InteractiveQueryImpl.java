@@ -52,7 +52,7 @@ public class InteractiveQueryImpl implements InteractiveQuery {
     }
 
     @Override
-    public <T, S extends RemoteQueryableStore> Optional<S> findCompatibleStore(HostInfo host, QueryableStoreType<T> type) {
+    public <R extends RemoteQueryableStore> Optional<R> findCompatibleStore(HostInfo host, QueryableStoreType<?> type) {
         return remoteStores.stream()
                            .filter(store -> store.isCompatible(type))
                            .findAny()

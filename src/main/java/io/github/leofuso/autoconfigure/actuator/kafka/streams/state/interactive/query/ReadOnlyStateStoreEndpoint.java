@@ -36,9 +36,6 @@ public class ReadOnlyStateStoreEndpoint {
      *              types.
      * @return the value associated with the key, if any. Will encapsulate eventual
      * {@link Exception#getMessage() exception's messages} into a response object.
-     *
-     * @implNote Due to the nature of the query Api this is a relative expensive operation and should be invoked with
-     * care. All disposable objects will only persist during the lifecycle of this query to save on resources.
      */
     @ReadOperation
     public <K, V> Map<String, String> find(@Selector String store, @Selector String key, @Nullable String serde) {
