@@ -1,5 +1,6 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.remote;
 
+import java.rmi.RemoteException;
 import java.util.Optional;
 
 import org.apache.kafka.streams.errors.InvalidStateStoreException;
@@ -11,7 +12,7 @@ import org.apache.kafka.streams.errors.InvalidStateStoreException;
 public interface RemoteQueryableReadOnlyKeyValueStore extends RemoteQueryableStore {
 
     @Override
-    default String reference() {
+    default String reference() throws RemoteException {
         return RemoteQueryableReadOnlyKeyValueStore.class.getName();
     }
 
@@ -27,6 +28,6 @@ public interface RemoteQueryableReadOnlyKeyValueStore extends RemoteQueryableSto
      * @throws NullPointerException       If null is used for key.
      * @throws InvalidStateStoreException if the store is not initialized
      */
-    <K, V> Optional<V> findByKey(K key, String storeName);
+    <K, V> Optional<V> findByKey(K key, String storeName) throws RemoteException;
 
 }

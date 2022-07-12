@@ -1,5 +1,7 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query;
 
+import java.rmi.RemoteException;
+
 import org.apache.kafka.streams.state.QueryableStoreType;
 
 /**
@@ -13,7 +15,7 @@ public interface QueryableStore {
      * @return either or not the given {@link QueryableStoreType type} is compatible with this {@link QueryableStore}
      * instance.
      */
-    default boolean isCompatible(QueryableStoreType<?> type) {
+    default boolean isCompatible(QueryableStoreType<?> type) throws RemoteException {
         return type.getClass()
                    .equals(
                            type().getClass()
@@ -23,6 +25,6 @@ public interface QueryableStore {
     /**
      * @return the {@link QueryableStoreType} associated with this {@link QueryableStore}.
      */
-    QueryableStoreType<?> type();
+    QueryableStoreType<?> type() throws RemoteException;
 
 }

@@ -2,6 +2,7 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive
 
 import javax.annotation.Nullable;
 
+import java.rmi.RemoteException;
 import java.util.Map;
 
 import org.apache.logging.log4j.util.Strings;
@@ -41,16 +42,24 @@ public class ReadOnlyStateStoreEndpoint {
     public <K, V> Map<String, String> find(@Selector String store, @Selector String key, @Nullable String serde) {
         try {
 
-            var action = Action.<K, V, RemoteQueryableReadOnlyKeyValueStore>performOn(store, keyValueStore())
+            var action =
+                    Action.<K, V, RemoteQueryableReadOnlyKeyValueStore>performOn(store, keyValueStore())
                                .usingStringifiedKey(key)
                                .withKeySerdeClass(serde)
-                               .aQuery((k, s) -> s.findByKey(k, store));
+                               .aQuery((k, s) -> {
+                                   try {
+                                       return s.findByKey(k, store);
+                                   } catch (RemoteException e) {
+                                       throw new RuntimeException(e);
+                                   }
+                               });
 
             return executor.execute(action)
                            .map(value -> Map.of(key, value.toString()))
                            .orElseGet(() -> Map.of(key, Strings.EMPTY));
 
-
+        } catch (ClassNotFoundException ex) {
+            return Map.of(ERROR_MESSAGE_KEY, "ClassNotFoundException: " + ex.getMessage());
         } catch (Exception ex) {
             return Map.of(ERROR_MESSAGE_KEY, ex.getMessage());
         }

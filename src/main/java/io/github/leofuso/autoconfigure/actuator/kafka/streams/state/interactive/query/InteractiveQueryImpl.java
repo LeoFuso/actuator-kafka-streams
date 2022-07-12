@@ -1,5 +1,6 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query;
 
+import java.rmi.RemoteException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
@@ -53,10 +54,18 @@ public class InteractiveQueryImpl implements InteractiveQuery {
 
     @Override
     public <R extends RemoteQueryableStore> Optional<R> findCompatibleStore(HostInfo host, QueryableStoreType<?> type) {
-        return remoteStores.stream()
-                           .filter(store -> store.isCompatible(type))
-                           .findAny()
-                           .map(store -> store.stub(host));
+        try {
+            for (RemoteQueryableStore store : remoteStores) {
+                final boolean isCompatible = store.isCompatible(type);
+                if (isCompatible) {
+                    final R stub = store.stub(host);
+                    return Optional.of(stub);
+                }
+            }
+        } catch (RemoteException ex) {
+            throw new RuntimeException(ex);
+        }
+        return Optional.empty();
     }
 
     @Override

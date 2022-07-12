@@ -22,7 +22,7 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
     /**
      * Used to bind this {@link Remote instance} to a {@link java.rmi.registry.Registry registry}.
      */
-    default void initialize() {
+    default void initialize() throws RemoteException {
         try {
             final String name = reference();
             final HostInfo self = self();
@@ -45,20 +45,22 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
     /**
      * @return the name to associate with this {@link Remote} reference.
      */
-    String reference();
+    String reference() throws RemoteException;
 
     /**
      * @return a {@link HostInfo host} that points to itself.
      */
-    HostInfo self();
+    HostInfo self() throws RemoteException;
 
     /**
      * Locate or create the RMI registry for this store.
+     *
      * @param host carrying the registry port to use
      * @return the RMI registry
+     *
      * @throws RuntimeException if the registry couldn't be located or created.
      */
-    default Registry locateOrCreateRegistry(HostInfo host) {
+    default Registry locateOrCreateRegistry(HostInfo host) throws RemoteException{
         final int port = host.port();
         synchronized (LocateRegistry.class) {
             try {
@@ -78,7 +80,7 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
     /**
      * Unbind the RMI service from the registry on bean factory shutdown.
      */
-    default void destroy() {
+    default void destroy() throws RemoteException {
         try {
             final Registry registry = locateOrCreateRegistry(self());
             registry.unbind(reference());
@@ -93,17 +95,18 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
 
     /**
      * @param host used to locate the {@link RemoteQueryableStore store}.
-     * @param <R> the type of the wanted {@link RemoteQueryableStore store}.
+     * @param <R>  the type of the wanted {@link RemoteQueryableStore store}.
      * @return a stub for this {@link RemoteQueryableStore store}, or the real one, if a proxy creation is unnecessary.
      */
     @SuppressWarnings("unchecked")
-    default <R extends RemoteQueryableStore> R stub(HostInfo host) {
-        final boolean unnecessaryStub = self().equals(host);
-        if (unnecessaryStub) {
-            return (R) this;
-        }
-
+    default <R extends RemoteQueryableStore> R stub(HostInfo host) throws RemoteException {
         try {
+
+            final boolean unnecessaryStub = self().equals(host);
+            if (unnecessaryStub) {
+                return (R) this;
+            }
+
             final String hostname = host.host();
             final int port = host.port();
 
