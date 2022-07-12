@@ -21,6 +21,11 @@ import static org.apache.kafka.streams.state.QueryableStoreTypes.keyValueStore;
  */
 public class LocalQueryableReadOnlyKeyValueStore implements RemoteQueryableReadOnlyKeyValueStore {
 
+    /**
+     * Explicit serialVersionUID for interoperability.
+     */
+    private static final long serialVersionUID = -5235727626367529380L;
+
     private final StreamsBuilderFactoryBean factory;
     private final HostInfo self;
 
