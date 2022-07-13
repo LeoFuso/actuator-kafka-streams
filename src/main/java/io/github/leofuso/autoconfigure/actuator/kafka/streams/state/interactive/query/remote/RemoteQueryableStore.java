@@ -1,6 +1,7 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.remote;
 
 import java.io.Serializable;
+import java.rmi.AlreadyBoundException;
 import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
@@ -27,23 +28,21 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
             final String name = reference();
             final HostInfo self = self();
             final Registry registry = locateOrCreateRegistry(self);
-            holdRegistry(registry);
 
             final int port = self.port();
-            UnicastRemoteObject.exportObject(this, port);
+            final Remote remoteObject = UnicastRemoteObject.exportObject(this, port);
+            hold(registry, remoteObject);
 
             /* Always rebinding, since we don't need to worry about stale references. */
-            registry.rebind(name, this);
+            registry.bind(name, this);
 
-        } catch (RemoteException e) {
+        } catch (AlreadyBoundException | RemoteException e) {
             try {
                 UnicastRemoteObject.unexportObject(this, true);
             } catch (NoSuchObjectException ignored) { /* Swallowing exception */ }
             throw new RuntimeException(e);
         }
     }
-
-    void holdRegistry(Registry registry) throws RemoteException;
 
     /**
      * @return the name to associate with this {@link Remote} reference.
@@ -63,7 +62,7 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
      *
      * @throws RuntimeException if the registry couldn't be located or created.
      */
-    default Registry locateOrCreateRegistry(HostInfo host) throws RemoteException{
+    default Registry locateOrCreateRegistry(HostInfo host) throws RemoteException {
         final int port = host.port();
         synchronized (LocateRegistry.class) {
             try {
@@ -79,6 +78,8 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
             }
         }
     }
+
+    void hold(Registry registry, final Remote remoteObject) throws RemoteException;
 
     /**
      * Unbind the RMI service from the registry on bean factory shutdown.

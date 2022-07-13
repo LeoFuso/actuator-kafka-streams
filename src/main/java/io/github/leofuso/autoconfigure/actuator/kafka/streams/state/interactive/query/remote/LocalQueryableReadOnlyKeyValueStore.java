@@ -2,6 +2,7 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive
 
 import javax.annotation.Nullable;
 
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.util.Objects;
@@ -34,8 +35,12 @@ public class LocalQueryableReadOnlyKeyValueStore implements RemoteQueryableReadO
     private final HostInfo self;
 
     @Nullable
-    @SuppressWarnings("FieldCanBeLocal")
-    private Registry registry;
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private static Registry registry;
+
+    @Nullable
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private static Remote remoteObject;
 
     /**
      * Creates a new instance of this {@link RemoteQueryableReadOnlyKeyValueStore store}. Will throw a
@@ -79,8 +84,9 @@ public class LocalQueryableReadOnlyKeyValueStore implements RemoteQueryableReadO
     }
 
     @Override
-    public void holdRegistry(final Registry registry) throws RemoteException {
-        this.registry = registry;
+    public void hold(final Registry registry, final Remote remoteObject) throws RemoteException {
+        LocalQueryableReadOnlyKeyValueStore.registry = registry;
+        LocalQueryableReadOnlyKeyValueStore.remoteObject = remoteObject;
     }
 
     @Override
