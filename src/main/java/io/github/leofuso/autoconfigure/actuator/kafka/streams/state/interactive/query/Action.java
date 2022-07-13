@@ -3,7 +3,6 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive
 import javax.annotation.Nullable;
 
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.BiFunction;
 
 import org.apache.kafka.common.serialization.Serde;
@@ -16,13 +15,13 @@ public class Action<K, V, R> {
     private final QueryableStoreType<?> queryableStoreType;
     private final String stringifiedKey;
     private final Class<Serde<K>> keySerdeClass;
-    private final BiFunction<K, R, Optional<V>> query;
+    private final BiFunction<K, R, V> query;
 
     public Action(final String stringifiedKey,
                   final Class<Serde<K>> keySerdeClass,
                   final String storeName,
                   final QueryableStoreType<?> queryableStoreType,
-                  final BiFunction<K, R, Optional<V>> query) {
+                  final BiFunction<K, R, V> query) {
 
         Assert.hasText(stringifiedKey, "Attribute [stringifiedKey] cannot be blank");
         Assert.hasText(storeName, "Attribute [storeName] cannot be blank");
@@ -57,7 +56,7 @@ public class Action<K, V, R> {
         return queryableStoreType;
     }
 
-    public BiFunction<K, R, Optional<V>> getQuery() {
+    public BiFunction<K, R, V> getQuery() {
         return query;
     }
 
@@ -90,7 +89,7 @@ public class Action<K, V, R> {
             return this;
         }
 
-        public Action<K, V, R> aQuery(BiFunction<K, R, Optional<V>> query) {
+        public Action<K, V, R> aQuery(BiFunction<K, R, V> query) {
             return new Action<>(
                     stringifiedKey,
                     keySerdeClass,

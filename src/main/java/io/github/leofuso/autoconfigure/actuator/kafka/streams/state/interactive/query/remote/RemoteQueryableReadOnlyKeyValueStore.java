@@ -28,6 +28,6 @@ public interface RemoteQueryableReadOnlyKeyValueStore extends RemoteQueryableSto
      * @throws NullPointerException       If null is used for key.
      * @throws InvalidStateStoreException if the store is not initialized
      */
-    <K, V> Optional<V> findByKey(K key, String storeName) throws RemoteException;
+    <K, V> V findByKey(K key, String storeName) throws RemoteException;
 
 }

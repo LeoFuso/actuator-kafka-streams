@@ -81,7 +81,7 @@ public class LocalQueryableReadOnlyKeyValueStore implements RemoteQueryableReadO
     }
 
     @Override
-    public <K, V> Optional<V> findByKey(final K key, final String storeName) {
+    public <K, V> V findByKey(final K key, final String storeName) {
         final KafkaStreams streams = factory.getKafkaStreams();
         if (streams == null) {
             throw new StreamsNotStartedException("KafkaStreams [factory.kafkaStreams] must be available.");
@@ -90,7 +90,6 @@ public class LocalQueryableReadOnlyKeyValueStore implements RemoteQueryableReadO
         final QueryableStoreType<ReadOnlyKeyValueStore<K, V>> type = keyValueStore();
         final StoreQueryParameters<ReadOnlyKeyValueStore<K, V>> parameters = fromNameAndType(storeName, type);
         final ReadOnlyKeyValueStore<K, V> store = streams.store(parameters);
-        final V value = store.get(key);
-        return Optional.ofNullable(value);
+        return store.get(key);
     }
 }

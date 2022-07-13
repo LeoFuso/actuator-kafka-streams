@@ -91,7 +91,7 @@ public class InteractiveQueryImpl implements InteractiveQuery {
         return findHost(key, serializer, storeName)
                 .flatMap(host -> findCompatibleStore(host, storeType))
                 .map(untypedRemoteStore -> (R) untypedRemoteStore)
-                .flatMap(remoteStore -> action.getQuery().apply(key, remoteStore));
+                .map(remoteStore -> action.getQuery().apply(key, remoteStore));
     }
 
 }
