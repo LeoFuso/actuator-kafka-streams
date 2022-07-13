@@ -27,6 +27,7 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
             final String name = reference();
             final HostInfo self = self();
             final Registry registry = locateOrCreateRegistry(self);
+            holdRegistry(registry);
 
             final int port = self.port();
             UnicastRemoteObject.exportObject(this, port);
@@ -41,6 +42,8 @@ public interface RemoteQueryableStore extends QueryableStore, Serializable, Remo
             throw new RuntimeException(e);
         }
     }
+
+    void holdRegistry(Registry registry) throws RemoteException;
 
     /**
      * @return the name to associate with this {@link Remote} reference.
