@@ -68,10 +68,13 @@ public class KeyValueStateStoreStub implements RemoteKeyValueStateStore {
 
             @Override
             public void onNext(Value value) {
-                /* ByteArray input stream */
+
+                final ByteString content = value.getContent();
+                final byte[] serializedContent = content.toByteArray();
+
                 @SuppressWarnings("unchecked")
-                final V content = (V) value.getContent();
-                completable.complete(content);
+                final V result = (V) SerializationUtils.deserialize(serializedContent);
+                completable.complete(result);
             }
 
             @Override
