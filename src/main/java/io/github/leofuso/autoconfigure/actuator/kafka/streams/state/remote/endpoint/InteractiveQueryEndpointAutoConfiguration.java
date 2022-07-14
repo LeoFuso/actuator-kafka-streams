@@ -1,4 +1,4 @@
-package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query;
+package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -17,9 +17,10 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.remote.LocalQueryableReadOnlyKeyValueStore;
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.remote.RemoteQueryableReadOnlyKeyValueStore;
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.interactive.query.remote.RemoteQueryableStore;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.DefaultRemoteQuerySupport;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.LocalKeyValueStore;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteQuerySupport;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteStateStore;
 
 import static org.apache.kafka.streams.StreamsConfig.APPLICATION_SERVER_CONFIG;
 
@@ -30,28 +31,28 @@ import static org.apache.kafka.streams.StreamsConfig.APPLICATION_SERVER_CONFIG;
 @ConditionalOnProperty(prefix = "spring.kafka", name = {"streams.properties." + APPLICATION_SERVER_CONFIG})
 public class InteractiveQueryEndpointAutoConfiguration {
 
+    @Bean
     @ConditionalOnMissingBean
-    @Bean(name = "remoteQueryableReadOnlyKeyValueStore", initMethod = "initialize", destroyMethod = "destroy")
-    public RemoteQueryableReadOnlyKeyValueStore keyValueStore(ObjectProvider<StreamsBuilderFactoryBean> provider) {
+    public LocalKeyValueStore localKeyValueStore(ObjectProvider<StreamsBuilderFactoryBean> provider) {
         final StreamsBuilderFactoryBean factory = provider.getIfAvailable();
         if (factory != null) {
-            return new LocalQueryableReadOnlyKeyValueStore(factory);
+            return new LocalKeyValueStore(factory);
         }
         return null;
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public InteractiveQuery interactiveQuery(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
-                                             ObjectProvider<RemoteQueryableStore> storesProvider,
-                                             ObjectProvider<ConversionService> converterProvider) {
+    public RemoteQuerySupport remoteQuerySupport(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
+                                                 ObjectProvider<RemoteStateStore> storesProvider,
+                                                 ObjectProvider<ConversionService> converterProvider) {
 
         final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
         final ConversionService converter = converterProvider.getIfAvailable();
 
         if (factory != null && converter != null) {
-            final Set<RemoteQueryableStore> stores = storesProvider.stream().collect(Collectors.toSet());
-            return new InteractiveQueryImpl(factory, stores, converter);
+            final Set<RemoteStateStore> stores = storesProvider.stream().collect(Collectors.toSet());
+            return new DefaultRemoteQuerySupport(factory, stores, converter);
         }
         return null;
     }
@@ -59,10 +60,10 @@ public class InteractiveQueryEndpointAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
-    public ReadOnlyStateStoreEndpoint readOnlyStateStoreEndpoint(ObjectProvider<InteractiveQuery> provider) {
-        final InteractiveQuery interactiveQuery = provider.getIfAvailable();
-        if (interactiveQuery != null) {
-            return new ReadOnlyStateStoreEndpoint(interactiveQuery);
+    public ReadOnlyStateStoreEndpoint readOnlyStateStoreEndpoint(ObjectProvider<RemoteQuerySupport> provider) {
+        final RemoteQuerySupport support = provider.getIfAvailable();
+        if (support != null) {
+            return new ReadOnlyStateStoreEndpoint(support);
         }
         return null;
     }

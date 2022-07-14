@@ -6,6 +6,7 @@ plugins {
     id 'signing'
     id 'maven-publish'
     id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
+    id 'com.google.protobuf' version '0.8.19'
 }
 
 group 'io.github.leofuso'
@@ -24,6 +25,11 @@ dependencies {
     implementation 'org.apache.kafka:kafka-streams'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
+
+    runtimeOnly 'io.grpc:grpc-netty-shaded:1.47.0'
+    implementation 'io.grpc:grpc-protobuf:1.47.0'
+    implementation 'io.grpc:grpc-stub:1.47.0'
+    compileOnly 'org.apache.tomcat:annotations-api:6.0.53'
 
     /* Annotation Processors */
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
@@ -65,6 +71,22 @@ javadoc {
 
 test {
     useJUnitPlatform()
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.19.2"
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.47.0'
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
 }
 
 publishing {
