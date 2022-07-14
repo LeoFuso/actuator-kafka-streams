@@ -21,6 +21,8 @@ import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.Defau
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.LocalKeyValueStore;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteQuerySupport;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteStateStore;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.StateStoreService;
+import io.grpc.Server;
 
 import static org.apache.kafka.streams.StreamsConfig.APPLICATION_SERVER_CONFIG;
 
@@ -51,7 +53,8 @@ public class InteractiveQueryEndpointAutoConfiguration {
         final ConversionService converter = converterProvider.getIfAvailable();
 
         if (factory != null && converter != null) {
-            final Set<RemoteStateStore> stores = storesProvider.stream().collect(Collectors.toSet());
+            final Set<RemoteStateStore> stores = storesProvider.stream()
+                                                               .collect(Collectors.toSet());
             return new DefaultRemoteQuerySupport(factory, stores, converter);
         }
         return null;
@@ -64,6 +67,22 @@ public class InteractiveQueryEndpointAutoConfiguration {
         final RemoteQuerySupport support = provider.getIfAvailable();
         if (support != null) {
             return new ReadOnlyStateStoreEndpoint(support);
+        }
+        return null;
+    }
+
+
+    @ConditionalOnMissingBean
+    @Bean(initMethod = "start", destroyMethod = "shutdown")
+    @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
+    public Server gRpcStateStoreServer(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
+                                       ObjectProvider<RemoteQuerySupport> provider) {
+
+        final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
+        final RemoteQuerySupport support = provider.getIfAvailable();
+
+        if (factory != null && support != null) {
+            return StateStoreService.getServerInstance(factory, support);
         }
         return null;
     }

@@ -49,7 +49,9 @@ public class ReadOnlyStateStoreEndpoint {
     @ReadOperation
     public <K, V> Map<String, String> find(@Selector String store, @Selector String key, @Nullable String serde) {
 
-        BiFunction<K, RemoteKeyValueStateStore, CompletableFuture<V>> invocation = (k, s) -> s.findOne(k, store);
+        final BiFunction<K, RemoteKeyValueStateStore, CompletableFuture<V>> invocation =
+                (k, s) -> s.findOne(k, store);
+
         try {
 
             final Arguments<K, V, RemoteKeyValueStateStore> arguments =

@@ -64,6 +64,20 @@ public class DefaultRemoteQuerySupport implements RemoteQuerySupport {
     }
 
     @Override
+    public <R extends RemoteStateStore> Optional<R> findStore(final String reference) {
+        for (RemoteStateStore store : stores) {
+            final String storeReference = store.reference();
+            final boolean isCompatible = storeReference.equals(reference);
+            if (isCompatible) {
+                @SuppressWarnings("unchecked")
+                final R localStore = (R) store;
+                return Optional.of(localStore);
+            }
+        }
+        return Optional.empty();
+    }
+
+    @Override
     public <R extends RemoteStateStore> Optional<R> findStore(HostInfo host, QueryableStoreType<?> storeType) {
         for (RemoteStateStore store : stores) {
             final boolean isCompatible = store.isCompatible(storeType);
@@ -80,7 +94,7 @@ public class DefaultRemoteQuerySupport implements RemoteQuerySupport {
         try (final Serde<K> serde = resolveKeySerde(arguments)) {
 
             final String stringifiedKey = arguments.getStringifiedKey();
-            final Class<K> serdeUnderlyingSignatureType = AdditionalSerdesConfig.serdeType(serde);
+            final Class<K> serdeUnderlyingSignatureType = AdditionalSerdesConfig.underlyingSerdeType(serde);
             final K key = converter.convert(stringifiedKey, serdeUnderlyingSignatureType);
 
             final Serializer<K> serializer = serde.serializer();
@@ -100,6 +114,7 @@ public class DefaultRemoteQuerySupport implements RemoteQuerySupport {
                          }
                     )
                     .orElseGet(() -> {
+                        /* Define a more suitable exception */
                         final IllegalStateException exception = new IllegalStateException();
                         return CompletableFuture.failedFuture(exception);
                     });
@@ -109,6 +124,7 @@ public class DefaultRemoteQuerySupport implements RemoteQuerySupport {
     private <K> Serde<K> resolveKeySerde(Arguments<K, ?, ?> arguments) {
         final Class<Serde<K>> keySerdeClass = arguments.getKeySerdeClass();
         if (keySerdeClass != null) {
+            /* Look for available Serdes on Serdes class as well. */
             return additionalSerdesConfig.serde(keySerdeClass);
         } else {
             @SuppressWarnings("unchecked")

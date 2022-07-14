@@ -6,6 +6,8 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.ValueAndTimestamp;
+import org.springframework.util.Assert;
+import org.springframework.util.SerializationUtils;
 
 import com.google.protobuf.ByteString;
 
@@ -47,7 +49,7 @@ public class KeyValueStateStoreStub implements RemoteKeyValueStateStore {
      */
     public KeyValueStateStoreStub(final StateStoreStub stub, final HostInfo host) {
         this.stub = Objects.requireNonNull(stub, "Field [stub] is required.");
-        this.host = host;
+        this.host = Objects.requireNonNull(host, "Field [host] is required.");
     }
 
     @Override
@@ -66,6 +68,7 @@ public class KeyValueStateStoreStub implements RemoteKeyValueStateStore {
 
             @Override
             public void onNext(Value value) {
+                /* ByteArray input stream */
                 @SuppressWarnings("unchecked")
                 final V content = (V) value.getContent();
                 completable.complete(content);
@@ -80,10 +83,13 @@ public class KeyValueStateStoreStub implements RemoteKeyValueStateStore {
             public void onCompleted() {}
         };
 
+        final byte[] keySerialized = SerializationUtils.serialize(key);
+        Assert.notNull(keySerialized, "Serialization cannot return null.");
+
         final Invocation invocation =
                 Invocation.newBuilder()
                           .setStore(reference())
-                          .putArguments(KEY_ARG, ByteString.copyFrom((byte[]) key))
+                          .putArguments(KEY_ARG, ByteString.copyFrom(keySerialized))
                           .putArguments(STORE_ARG, ByteString.copyFrom(storeName, StandardCharsets.UTF_8))
                           .putArguments(getMethodKey(), ByteString.copyFrom(method, StandardCharsets.UTF_8))
                           .build();

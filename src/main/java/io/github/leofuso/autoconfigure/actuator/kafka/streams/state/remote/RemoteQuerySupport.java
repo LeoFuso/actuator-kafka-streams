@@ -25,6 +25,15 @@ public interface RemoteQuerySupport {
     <K> Optional<HostInfo> findHost(K key, Serializer<K> serializer, String storeName);
 
     /**
+     * Find a specific {@link RemoteStateStore store} by its {@link RemoteStateStore#reference() reference}.
+     *
+     * @param reference the reference.
+     * @param <R>       the {@link RemoteStateStore storeType} type.
+     * @return a {@link RemoteStateStore} associated with given {@link RemoteStateStore#reference() reference}.
+     */
+    <R extends RemoteStateStore> Optional<R> findStore(String reference);
+
+    /**
      * @param host      used for lookups.
      * @param storeType used to compatibility check against the {@link RemoteStateStore store} candidates.
      * @param <R>       the {@link RemoteStateStore storeType} type.
