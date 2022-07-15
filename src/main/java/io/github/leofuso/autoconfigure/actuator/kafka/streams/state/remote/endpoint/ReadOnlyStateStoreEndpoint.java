@@ -62,6 +62,7 @@ public class ReadOnlyStateStoreEndpoint {
             final CompletableFuture<V> invocationFuture = support.invoke(arguments)
                                                                  .orTimeout(10, TimeUnit.SECONDS);
 
+            /* Try to find a way of making this endpoint Reactive? */
             final V v = invocationFuture.get();
             return Optional.ofNullable(v)
                            .map(value -> Map.of(key, value.toString()))

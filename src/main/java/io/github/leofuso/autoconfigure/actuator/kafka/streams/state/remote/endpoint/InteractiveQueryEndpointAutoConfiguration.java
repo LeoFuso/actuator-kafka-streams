@@ -53,8 +53,7 @@ public class InteractiveQueryEndpointAutoConfiguration {
         final ConversionService converter = converterProvider.getIfAvailable();
 
         if (factory != null && converter != null) {
-            final Set<RemoteStateStore> stores = storesProvider.stream()
-                                                               .collect(Collectors.toSet());
+            final Set<RemoteStateStore> stores = storesProvider.stream().collect(Collectors.toSet());
             return new DefaultRemoteQuerySupport(factory, stores, converter);
         }
         return null;
@@ -76,10 +75,10 @@ public class InteractiveQueryEndpointAutoConfiguration {
     @Bean(initMethod = "start", destroyMethod = "shutdown")
     @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
     public Server gRpcStateStoreServer(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
-                                       ObjectProvider<RemoteQuerySupport> provider) {
+                                       ObjectProvider<RemoteQuerySupport> supportProvider) {
 
         final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
-        final RemoteQuerySupport support = provider.getIfAvailable();
+        final RemoteQuerySupport support = supportProvider.getIfAvailable();
 
         if (factory != null && support != null) {
             return StateStoreService.getServerInstance(factory, support);

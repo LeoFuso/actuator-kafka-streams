@@ -14,7 +14,7 @@ service StateStore {
 }
 
 message Invocation {
-  string store = 1;
+  string storeReference = 1;
   map<int32, bytes> arguments = 2;
 }
 

@@ -95,7 +95,7 @@ public interface RemoteKeyValueStateStore extends RemoteStateStore {
         return remoteStub;
     }
 
-    default Integer getMethodKey() {
+    default Integer methodKey() {
         return 2;
     }
 

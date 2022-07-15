@@ -1,16 +1,22 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote;
 
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.QueryableStoreType;
+import org.springframework.util.ReflectionUtils;
 
 import com.google.protobuf.ByteString;
+
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils;
+
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils.deserialize;
 
 /**
  * A {@link RemoteStateStore} encapsulates a {@link org.apache.kafka.streams.processor.StateStore store} capable of
@@ -51,26 +57,47 @@ public interface RemoteStateStore {
      */
     <R extends RemoteStateStore> R stub(HostInfo host);
 
-    default Integer getMethodKey() {
-        return 0;
-    }
-
     default Optional<Method> method(Invocation invocation) {
 
-        final Integer methodKey = getMethodKey();
-        final String toLookFor =
-                invocation.getArgumentsOrDefault(methodKey, ByteString.EMPTY)
-                          .toString(StandardCharsets.UTF_8);
+        final Integer methodKey = methodKey();
+        final ByteString methodArgument = invocation.getArgumentsOrDefault(methodKey, ByteString.EMPTY);
+        final byte[] bytes = methodArgument.toByteArray();
 
+        final String methodOfInterest = deserialize(bytes);
         final Predicate<Method> methodPredicate = method -> {
-            final String actual = method.getName();
-            return actual.equals(toLookFor);
+            final String currentMethod = method.getName();
+            return currentMethod.equals(methodOfInterest);
         };
 
-        final Method[] methods = KeyValueStateStoreStub.class.getDeclaredMethods();
+        final Method[] methods = getClass().getMethods();
         return Arrays.stream(methods)
                      .filter(methodPredicate)
                      .findFirst();
     }
 
+    default Integer methodKey() {
+        return 0;
+    }
+
+    default CompletableFuture<?> invoke(Method method, Invocation invocation) {
+
+        final Predicate<Map.Entry<Integer, ByteString>> methodNameFilter = entry -> {
+            final Integer methodKey = methodKey();
+            final Integer currentKey = entry.getKey();
+            return !currentKey.equals(methodKey);
+        };
+
+        final Object[] args = invocation
+                .getArgumentsMap()
+                .entrySet()
+                .stream()
+                .filter(methodNameFilter)
+                .sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue)
+                .map(ByteString::toByteArray)
+                .map(SerializationUtils::deserialize)
+                .toArray();
+
+        return (CompletableFuture<?>) ReflectionUtils.invokeMethod(method, this, args);
+    }
 }

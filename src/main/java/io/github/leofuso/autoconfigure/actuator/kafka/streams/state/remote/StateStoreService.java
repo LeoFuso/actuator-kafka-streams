@@ -1,22 +1,21 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote;
 
 import java.lang.reflect.Method;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
-import org.springframework.util.Assert;
-import org.springframework.util.ReflectionUtils;
-import org.springframework.util.SerializationUtils;
 
 import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
+
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils.serialize;
 
 public class StateStoreService extends StateStoreGrpc.StateStoreImplBase {
 
@@ -35,8 +34,8 @@ public class StateStoreService extends StateStoreGrpc.StateStoreImplBase {
                        .map(info -> {
 
                            final StateStoreService service = new StateStoreService(support);
-                           final int port = info.port();
 
+                           final int port = info.port();
                            return ServerBuilder.forPort(port)
                                                .addService(service)
                                                .build();
@@ -47,9 +46,8 @@ public class StateStoreService extends StateStoreGrpc.StateStoreImplBase {
     @Override
     public void invoke(final Invocation invocation, final StreamObserver<Value> observer) {
 
-        final String store = invocation.getStore();
-
-        final Optional<RemoteStateStore> storeFound = support.findStore(store);
+        final String reference = invocation.getStoreReference();
+        final Optional<RemoteStateStore> storeFound = support.findStore(reference);
         final boolean missingStore = storeFound.isEmpty();
         if (missingStore) {
             /* Some specific Exception */
@@ -58,8 +56,8 @@ public class StateStoreService extends StateStoreGrpc.StateStoreImplBase {
             return;
         }
 
-        final RemoteStateStore stateStore = storeFound.get();
-        final Optional<Method> methodFound = stateStore.method(invocation);
+        final RemoteStateStore store = storeFound.get();
+        final Optional<Method> methodFound = store.method(invocation);
         final boolean missingMethod = methodFound.isEmpty();
         if (missingMethod) {
             /* Some specific Exception */
@@ -69,21 +67,11 @@ public class StateStoreService extends StateStoreGrpc.StateStoreImplBase {
         }
 
         final Method method = methodFound.get();
-        final Object[] args = invocation
-                .getArgumentsMap()
-                .entrySet()
-                .stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(Map.Entry::getValue)
-                .map(ByteString::toByteArray)
-                .map(SerializationUtils::deserialize)
-                .toArray();
+        final CompletableFuture<?> future = store.invoke(method, invocation);
+        final Object result = future.getNow(null);
+        final byte[] bytes = serialize(result);
 
-        final Object result = ReflectionUtils.invokeMethod(method, stateStore, args);
-        final byte[] serializedResult = SerializationUtils.serialize(result);
-        Assert.notNull(serializedResult, "SerializedResult cannot be null.");
-
-        final ByteString content = ByteString.copyFrom(serializedResult);
+        final ByteString content = ByteString.copyFrom(bytes);
         final Value value = Value.newBuilder()
                                  .setContent(content)
                                  .build();

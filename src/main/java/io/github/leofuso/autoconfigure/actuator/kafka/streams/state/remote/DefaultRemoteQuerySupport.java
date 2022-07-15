@@ -65,13 +65,13 @@ public class DefaultRemoteQuerySupport implements RemoteQuerySupport {
 
     @Override
     public <R extends RemoteStateStore> Optional<R> findStore(final String reference) {
-        for (RemoteStateStore store : stores) {
-            final String storeReference = store.reference();
+        for (RemoteStateStore localStore : stores) {
+            final String storeReference = localStore.reference();
             final boolean isCompatible = storeReference.equals(reference);
             if (isCompatible) {
                 @SuppressWarnings("unchecked")
-                final R localStore = (R) store;
-                return Optional.of(localStore);
+                final R store = (R) localStore;
+                return Optional.of(store);
             }
         }
         return Optional.empty();
