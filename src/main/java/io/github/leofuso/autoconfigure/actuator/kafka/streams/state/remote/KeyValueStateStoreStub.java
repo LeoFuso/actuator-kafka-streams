@@ -8,9 +8,11 @@ import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 import com.google.protobuf.ByteString;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Invocation;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Value;
 import io.grpc.stub.StreamObserver;
 
-import static io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.StateStoreGrpc.StateStoreStub;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.StateStoreGrpc.StateStoreStub;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils.deserialize;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils.serialize;
 
@@ -78,9 +80,9 @@ public class KeyValueStateStoreStub implements RemoteKeyValueStateStore {
             @Override
             public void onError(Throwable throwable) {
                 /*
-                * We have to find a way of improving the exception handling.
-                * The exception that ends up in the response is mealiness.
-                */
+                 * We have to find a way of improving the exception handling.
+                 * The exception that ends up in the response is mealiness.
+                 */
                 completable.completeExceptionally(throwable);
             }
 

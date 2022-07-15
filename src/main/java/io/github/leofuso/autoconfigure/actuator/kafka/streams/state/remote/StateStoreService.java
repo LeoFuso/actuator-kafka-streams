@@ -11,6 +11,9 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
 import com.google.protobuf.ByteString;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Invocation;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.StateStoreGrpc;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Value;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;

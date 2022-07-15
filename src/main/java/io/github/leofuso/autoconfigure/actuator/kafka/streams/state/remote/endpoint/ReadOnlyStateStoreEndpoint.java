@@ -53,7 +53,6 @@ public class ReadOnlyStateStoreEndpoint {
                 (k, s) -> s.findOne(k, store);
 
         try {
-
             final Arguments<K, V, RemoteKeyValueStateStore> arguments =
                     Arguments.perform(invocation)
                              .passing(key, serde)

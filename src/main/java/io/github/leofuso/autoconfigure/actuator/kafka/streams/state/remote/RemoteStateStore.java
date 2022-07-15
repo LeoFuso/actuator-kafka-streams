@@ -14,6 +14,7 @@ import org.springframework.util.ReflectionUtils;
 
 import com.google.protobuf.ByteString;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Invocation;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils;
 
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils.deserialize;

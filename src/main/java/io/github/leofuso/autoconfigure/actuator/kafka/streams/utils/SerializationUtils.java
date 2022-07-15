@@ -52,6 +52,7 @@ public abstract class SerializationUtils {
      * Java Object Serialization is known for being the source of many Remote Code Execution (RCE) vulnerabilities.
      *
      * @param bytes a serialized object
+     * @param <T>   the type to cast the deserialized object to.
      * @return the result of deserializing the bytes
      */
 

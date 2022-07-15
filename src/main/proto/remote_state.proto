@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote";
+option java_package = "io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc";
 
 package remote_state_store;
 
