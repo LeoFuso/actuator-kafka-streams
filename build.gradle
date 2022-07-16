@@ -17,30 +17,6 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-
-    /* Spring */
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.kafka:spring-kafka'
-    implementation 'org.apache.kafka:kafka-streams'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
-    implementation 'com.google.code.findbugs:jsr305:3.0.2'
-
-    runtimeOnly 'io.grpc:grpc-netty-shaded:1.47.0'
-    implementation 'io.grpc:grpc-protobuf:1.47.0'
-    implementation 'io.grpc:grpc-stub:1.47.0'
-    compileOnly 'org.apache.tomcat:annotations-api:6.0.53'
-
-    /* Annotation Processors */
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-    annotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'
-
-    /* Test */
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.kafka:spring-kafka-test'
-
-}
-
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
@@ -61,6 +37,16 @@ compileJava {
 java {
     withJavadocJar()
     withSourcesJar()
+    registerFeature('principal') {
+        usingSourceSet(sourceSets.main)
+        withJavadocJar()
+        withSourcesJar()
+    }
+    registerFeature('grpcSupport') {
+        usingSourceSet(sourceSets.main)
+        withJavadocJar()
+        withSourcesJar()
+    }
 }
 
 javadoc {
@@ -69,10 +55,35 @@ javadoc {
     }
 }
 
+dependencies {
+
+    /* Spring */
+    principalImplementation 'org.springframework.boot:spring-boot-starter-actuator'
+    principalImplementation 'org.springframework.kafka:spring-kafka'
+    principalImplementation 'org.apache.kafka:kafka-streams'
+    principalImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    principalImplementation 'com.google.code.findbugs:jsr305:3.0.2'
+
+    grpcSupportImplementation 'io.grpc:grpc-protobuf:1.47.0'
+    grpcSupportImplementation 'io.grpc:grpc-stub:1.47.0'
+    grpcSupportApiElements 'org.apache.tomcat:annotations-api:6.0.53'
+    grpcSupportRuntimeElements 'io.grpc:grpc-netty-shaded:1.47.0'
+
+    /* Annotation Processors */
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'
+
+    /* Test */
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+
+}
+
 test {
     useJUnitPlatform()
 }
 
+/* gRPC Support requires code to be generated based on .proto files, these must be packed together with the lib */
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:3.19.2"
