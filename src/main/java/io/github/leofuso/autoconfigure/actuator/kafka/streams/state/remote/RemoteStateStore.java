@@ -3,7 +3,6 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
@@ -14,6 +13,7 @@ import org.springframework.util.ReflectionUtils;
 
 import com.google.protobuf.ByteString;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.exceptions.MissingMethodException;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Invocation;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils;
 
@@ -58,7 +58,11 @@ public interface RemoteStateStore {
      */
     <R extends RemoteStateStore> R stub(HostInfo host);
 
-    default Optional<Method> method(Invocation invocation) {
+    /**
+     * @param invocation carrying the {@link Method method name} to delegate this invocation to.
+     * @return the {@link Method method} that needs to be invoked.
+     */
+    default Method method(Invocation invocation) {
 
         final Integer methodKey = methodKey();
         final ByteString methodArgument = invocation.getArgumentsOrDefault(methodKey, ByteString.EMPTY);
@@ -73,13 +77,25 @@ public interface RemoteStateStore {
         final Method[] methods = getClass().getMethods();
         return Arrays.stream(methods)
                      .filter(methodPredicate)
-                     .findFirst();
+                     .findFirst()
+                     .orElseThrow(() -> new MissingMethodException(invocation.getStoreReference(), methodOfInterest));
     }
 
+    /**
+     * Every {@link io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Invocation invocation} must
+     * contain a {@link java.lang.reflect.Method method name} to invoke to.
+     *
+     * @return the key identifying the {@link java.lang.reflect.Method method name} to invoke.
+     */
     default Integer methodKey() {
         return 0;
     }
 
+    /**
+     * @param method     the {@link Method} that needs to be invoked.
+     * @param invocation the {@link Invocation carrier} of all arguments needed to invoke this {@link Method method}.
+     * @return a {@link CompletableFuture} carrying the result of this invocation.
+     */
     default CompletableFuture<?> invoke(Method method, Invocation invocation) {
 
         final Predicate<Map.Entry<Integer, ByteString>> methodNameFilter = entry -> {

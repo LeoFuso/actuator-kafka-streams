@@ -21,7 +21,7 @@ import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.Defau
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.LocalKeyValueStore;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteQuerySupport;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteStateStore;
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.StateStoreService;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteStateStoreService;
 import io.grpc.Server;
 
 import static org.apache.kafka.streams.StreamsConfig.APPLICATION_SERVER_CONFIG;
@@ -81,7 +81,7 @@ public class InteractiveQueryEndpointAutoConfiguration {
         final RemoteQuerySupport support = supportProvider.getIfAvailable();
 
         if (factory != null && support != null) {
-            return StateStoreService.getServerInstance(factory, support);
+            return RemoteStateStoreService.getServerInstance(factory, support);
         }
         return null;
     }

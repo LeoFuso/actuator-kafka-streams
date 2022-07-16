@@ -18,8 +18,13 @@ import org.apache.kafka.streams.state.QueryableStoreType;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import org.springframework.util.Assert;
+import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
+import org.springframework.util.concurrent.ListenableFuture;
 
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.additional.serdes.AdditionalSerdesConfig;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.exceptions.UnableToLocateRemoteStoreException;
+
+import static java.util.Optional.ofNullable;
 
 /**
  * Default implementation of {@link RemoteQuerySupport Api}.
@@ -34,14 +39,16 @@ public class DefaultRemoteQuerySupport implements RemoteQuerySupport {
     private final StreamsConfig streamsConfig;
     private final AdditionalSerdesConfig additionalSerdesConfig;
 
-    public DefaultRemoteQuerySupport(StreamsBuilderFactoryBean factory, Set<RemoteStateStore> stores, ConversionService converter) {
+    public DefaultRemoteQuerySupport(StreamsBuilderFactoryBean factory,
+                                     Set<RemoteStateStore> stores,
+                                     ConversionService converter) {
         this.factory = Objects.requireNonNull(factory, "StreamsBuilderFactoryBean [factory] is required.");
         this.converter = Objects.requireNonNull(converter, "ConversionService [converter] is required");
 
         final Properties properties = factory.getStreamsConfiguration();
         Assert.state(properties != null, "Streams configuration properties must not be null.");
 
-        this.stores = Optional.ofNullable(stores).orElseGet(Set::of);
+        this.stores = ofNullable(stores).orElseGet(Set::of);
         this.streamsConfig = new StreamsConfig(properties);
         this.additionalSerdesConfig = new AdditionalSerdesConfig(properties);
     }
@@ -114,17 +121,23 @@ public class DefaultRemoteQuerySupport implements RemoteQuerySupport {
                          }
                     )
                     .orElseGet(() -> {
-                        /* Define a more suitable exception */
-                        final IllegalStateException exception = new IllegalStateException();
+                        final UnableToLocateRemoteStoreException exception =
+                                new UnableToLocateRemoteStoreException(arguments);
                         return CompletableFuture.failedFuture(exception);
                     });
         }
     }
 
+    @Override
+    public <K, V, R extends RemoteStateStore> ListenableFuture<V> listenableInvoke(Arguments<K, V, R> arguments) {
+        final CompletableFuture<V> future = invoke(arguments);
+        return new CompletableToListenableFutureAdapter<>(future);
+    }
+
     private <K> Serde<K> resolveKeySerde(Arguments<K, ?, ?> arguments) {
         final Class<Serde<K>> keySerdeClass = arguments.getKeySerdeClass();
         if (keySerdeClass != null) {
-            /* Look for available Serdes on Serdes class as well. */
+            /* Looks for available Serdes on Serdes class as well. */
             return additionalSerdesConfig.serde(keySerdeClass);
         } else {
             @SuppressWarnings("unchecked")

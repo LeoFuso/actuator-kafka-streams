@@ -9,11 +9,8 @@ import org.apache.kafka.streams.state.ValueAndTimestamp;
 import com.google.protobuf.ByteString;
 
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Invocation;
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Value;
-import io.grpc.stub.StreamObserver;
 
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.StateStoreGrpc.StateStoreStub;
-import static io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils.deserialize;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils.serialize;
 
 /**
@@ -64,32 +61,7 @@ public class KeyValueStateStoreStub implements RemoteKeyValueStateStore {
     }
 
     private <K, V> CompletableFuture<V> doFindOne(String method, final K key, final String storeName) {
-
-        CompletableFuture<V> completable = new CompletableFuture<>();
-        /* Create a class to encapsulate this observer stuff */
-        StreamObserver<Value> observer = new StreamObserver<>() {
-
-            @Override
-            public void onNext(Value value) {
-                final ByteString content = value.getContent();
-                final byte[] serializedContent = content.toByteArray();
-                final V result = deserialize(serializedContent);
-                completable.complete(result);
-            }
-
-            @Override
-            public void onError(Throwable throwable) {
-                /*
-                 * We have to find a way of improving the exception handling.
-                 * The exception that ends up in the response is mealiness.
-                 */
-                completable.completeExceptionally(throwable);
-            }
-
-            @Override
-            public void onCompleted() {}
-        };
-
+        final StreamCompletableFutureObserver<V> observer = new StreamCompletableFutureObserver<>();
         final Invocation invocation =
                 Invocation.newBuilder()
                           .setStoreReference(reference())
@@ -99,7 +71,7 @@ public class KeyValueStateStoreStub implements RemoteKeyValueStateStore {
                           .build();
 
         stub.invoke(invocation, observer);
-        return completable;
+        return observer;
     }
 
     @Override

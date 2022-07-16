@@ -43,6 +43,8 @@ public class ReadOnlyStateStoreEndpoint {
      * @param key   to query for.
      * @param serde the key class. Restricted to supported {@link org.apache.kafka.common.serialization.Serdes serdes}
      *              types or {@link AdditionalSerdesConfig additional ones};
+     * @param <K>   the key type.
+     * @param <V>   the value type.
      * @return the value associated with the key, if any. Will encapsulate eventual
      * {@link Exception#getMessage() exception's messages} into a response object.
      */
@@ -71,5 +73,4 @@ public class ReadOnlyStateStoreEndpoint {
             return Map.of(ERROR_MESSAGE_KEY, ex.getMessage());
         }
     }
-
 }

@@ -8,6 +8,7 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.common.serialization.Serdes;
 import org.springframework.core.ResolvableType;
 
 import static org.apache.kafka.common.config.ConfigDef.Importance;

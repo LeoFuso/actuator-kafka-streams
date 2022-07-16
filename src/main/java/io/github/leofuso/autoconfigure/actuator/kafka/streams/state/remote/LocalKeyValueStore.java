@@ -1,6 +1,5 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote;
 
-import java.rmi.registry.Registry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -30,8 +29,8 @@ public class LocalKeyValueStore implements RemoteKeyValueStateStore {
 
     /**
      * Creates a new instance of this {@link RemoteKeyValueStateStore store}. Will throw a {@link NullPointerException}
-     * in case of missing required configurations, including the ability to create a {@link HostInfo host}, necessary to
-     * expose this {@link RemoteKeyValueStateStore store} to the {@link Registry registry}.
+     * if missing required configurations, including the ability to create a {@link HostInfo host}, necessary to expose
+     * this {@link RemoteKeyValueStateStore store} to the {@link io.grpc.Server server}.
      *
      * @param factory used to extract the necessary configurations to a new instance.
      */

@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.QueryableStoreType;
+import org.springframework.util.concurrent.ListenableFuture;
 
 /**
  * Provides an easy Api to execute queries locally and remotely, without worrying about the lifecycle of all the
@@ -54,4 +55,16 @@ public interface RemoteQuerySupport {
      * @return a result after performing a successful invocation, or nothing.
      */
     <K, V, R extends RemoteStateStore> CompletableFuture<V> invoke(Arguments<K, V, R> arguments);
+
+    /**
+     * Will locate and perform an invocation on the specified {@link RemoteStateStore store}.
+     *
+     * @param arguments needed to locate a {@link RemoteStateStore store}, and perform the invocation on found
+     *                  {@link RemoteStateStore store}.
+     * @param <K>       the key type.
+     * @param <V>       the value type returned by the performed invocation.
+     * @param <R>       the {@link RemoteStateStore store} type.
+     * @return a listenable result after performing a successful invocation, or nothing.
+     */
+    <K, V, R extends RemoteStateStore> ListenableFuture<V> listenableInvoke(Arguments<K, V, R> arguments);
 }
