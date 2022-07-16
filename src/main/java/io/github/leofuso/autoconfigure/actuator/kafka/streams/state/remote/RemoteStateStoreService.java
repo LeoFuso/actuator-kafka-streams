@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.errors.StreamsNotStartedException;
@@ -36,11 +37,15 @@ public class RemoteStateStoreService extends StateStoreGrpc.StateStoreImplBase {
      * if missing required configurations, including the ability to create a {@link HostInfo host}, necessary to expose
      * this {@link RemoteStateStoreService service}.
      *
-     * @param factory needed to extract a {@link HostInfo}.
-     * @param support to delegate the {@link Invocation invocations} to.
+     * @param factory     needed to extract a {@link HostInfo}.
+     * @param configurers that can provide additional behaviors before the {@link Server} is created.
+     * @param support     to delegate the {@link Invocation invocations} to.
      * @return a new {@link Server server} ready to be started.
      */
-    public static Server getServerInstance(StreamsBuilderFactoryBean factory, RemoteQuerySupport support) {
+    public static Server getServerInstance(StreamsBuilderFactoryBean factory,
+                                           Stream<GrpcServerConfigurer> configurers,
+                                           RemoteQuerySupport support) {
+
         return Optional.of(factory)
                        .map(StreamsBuilderFactoryBean::getStreamsConfiguration)
                        .map(StreamsConfig::new)
@@ -51,9 +56,16 @@ public class RemoteStateStoreService extends StateStoreGrpc.StateStoreImplBase {
                            final RemoteStateStoreService service = new RemoteStateStoreService(support);
 
                            final int port = info.port();
-                           return ServerBuilder.forPort(port)
-                                               .addService(service)
-                                               .build();
+                           final ServerBuilder<?> builder = configurers
+                                   .reduce(
+                                           ServerBuilder.forPort(port)
+                                                        .addService(service),
+                                           (ServerBuilder<?> acc, GrpcServerConfigurer config) ->
+                                                   config.configure(acc),
+                                           (b1, b2) -> b2
+                                   );
+
+                           return builder.build();
                        })
                        .orElseThrow(() -> {
                            final String message =

@@ -17,19 +17,23 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
+import com.google.protobuf.Service;
+
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.DefaultRemoteQuerySupport;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.GrpcServerConfigurer;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.LocalKeyValueStore;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteQuerySupport;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteStateStore;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteStateStoreService;
 import io.grpc.Server;
+import io.grpc.stub.StreamObserver;
 
 import static org.apache.kafka.streams.StreamsConfig.APPLICATION_SERVER_CONFIG;
 
 
 @AutoConfiguration(after = {EndpointAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class})
-@ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class, Endpoint.class})
-@ConditionalOnBean(value = {StreamsBuilderFactoryBean.class})
+@ConditionalOnClass({Server.class, Service.class, StreamObserver.class, KafkaStreamsDefaultConfiguration.class, Endpoint.class})
+@ConditionalOnBean({StreamsBuilderFactoryBean.class})
 @ConditionalOnProperty(prefix = "spring.kafka", name = {"streams.properties." + APPLICATION_SERVER_CONFIG})
 public class InteractiveQueryEndpointAutoConfiguration {
 
@@ -75,15 +79,15 @@ public class InteractiveQueryEndpointAutoConfiguration {
     @Bean(initMethod = "start", destroyMethod = "shutdown")
     @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
     public Server gRpcStateStoreServer(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
+                                       ObjectProvider<GrpcServerConfigurer> configurers,
                                        ObjectProvider<RemoteQuerySupport> supportProvider) {
 
         final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
         final RemoteQuerySupport support = supportProvider.getIfAvailable();
 
         if (factory != null && support != null) {
-            return RemoteStateStoreService.getServerInstance(factory, support);
+            return RemoteStateStoreService.getServerInstance(factory, configurers.orderedStream(), support);
         }
         return null;
     }
-
 }
