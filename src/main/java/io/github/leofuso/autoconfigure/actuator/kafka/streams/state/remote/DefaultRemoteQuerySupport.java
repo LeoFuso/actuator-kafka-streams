@@ -138,7 +138,7 @@ public class DefaultRemoteQuerySupport implements RemoteQuerySupport {
         final Class<Serde<K>> keySerdeClass = arguments.getKeySerdeClass();
         if (keySerdeClass != null) {
             /* Looks for available Serdes on Serdes class as well. */
-            return additionalSerdesConfig.serde(keySerdeClass);
+            return additionalSerdesConfig.keySerde(keySerdeClass);
         } else {
             @SuppressWarnings("unchecked")
             final Serde<K> defaultSerde = streamsConfig.defaultKeySerde();

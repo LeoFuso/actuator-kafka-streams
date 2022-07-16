@@ -11,6 +11,8 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.springframework.core.ResolvableType;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.additional.serdes.exceptions.AdditionalConfigException;
+
 import static org.apache.kafka.common.config.ConfigDef.Importance;
 import static org.apache.kafka.common.config.ConfigDef.Type;
 import static org.apache.kafka.common.config.ConfigDef.Validator;
@@ -84,20 +86,45 @@ public class AdditionalSerdesConfig extends AbstractConfig {
     }
 
     /**
-     * Returns a {@link Serde#configure(Map, boolean) configured} instance of given Serde class.
+     * Returns the underlying {@link Serde serde} type.
+     *
+     * @param serde That needs to have its underlying type extracted.
+     * @param <T>   the resulting underlying type.
+     * @param <S>   the serde type.
+     * @return the underlying {@link Serde serde} type.
+     */
+    public static <T, S extends Serde<T>> Class<T> underlyingSerdeType(Class<S> serde) {
+        final int serdeTypeIndex = 0;
+        final ResolvableType resolvableType = ResolvableType.forClass(serde)
+                                                            .as(Serde.class);
+
+        @SuppressWarnings("unchecked")
+        final Class<T> serdeType = (Class<T>) resolvableType.resolveGeneric(serdeTypeIndex);
+        return serdeType;
+    }
+
+    /**
+     * Returns a {@link Serde#configure(Map, boolean) configured} instance of given Key Serde class.
      *
      * @param serdeClass the {@link Class} to instantiate and configure.
      * @param <S>        the resulting {@link Serde} type.
      * @param <T>        the underlying {@link Serde} type.
-     * @return a {@link Serde#configure(Map, boolean) configured} instance of given Serde class.
+     * @return a {@link Serde#configure(Map, boolean) configured} instance of given Key Serde class.
      */
-    public <T, S extends Serde<T>> Serde<T> serde(Class<S> serdeClass) {
+    public <T, S extends Serde<T>> Serde<T> keySerde(Class<S> serdeClass) {
+
+        try {
+            final Class<T> underlyingSerdeType = underlyingSerdeType(serdeClass);
+            return Serdes.serdeFrom(underlyingSerdeType);
+        } catch (IllegalArgumentException ignored) {}
+
+
         final String name = serdeClass.getName();
         try {
             final Map<String, Object> properties = valuesWithPrefixOverride(ADDITIONAL_SERDES_PROPERTIES_PREFIX);
             return getConfiguredInstance(name, serdeClass, properties);
         } catch (Exception e) {
-            throw new ConfigException("Failed to configure Serde [" + name + "]", e);
+            throw new AdditionalConfigException("Failed to configure Serde [" + name + "]:", e);
         }
     }
 
@@ -130,7 +157,7 @@ public class AdditionalSerdesConfig extends AbstractConfig {
 
             for (String className : parsedList) {
                 final Class<?> parsedClass = (Class<?>) parseType(name, className, Type.CLASS);
-                final boolean isSerde = parsedClass.isAssignableFrom(Serde.class);
+                final boolean isSerde = Serde.class.isAssignableFrom(parsedClass);
                 if (!isSerde) {
                     final String messageTemplate =
                             "Class [%s] must be assignable from [org.apache.kafka.common.serialization.Serde]";

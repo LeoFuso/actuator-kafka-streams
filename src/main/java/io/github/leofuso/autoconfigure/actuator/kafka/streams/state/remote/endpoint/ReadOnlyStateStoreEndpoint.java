@@ -70,7 +70,13 @@ public class ReadOnlyStateStoreEndpoint {
                            .orElseGet(() -> Map.of(key, Strings.EMPTY));
 
         } catch (Exception ex) {
-            return Map.of(ERROR_MESSAGE_KEY, ex.getMessage());
+            final Throwable cause = ex.getCause();
+            final String message = Optional
+                    .ofNullable(cause)
+                    .map(Throwable::toString)
+                    .orElseGet(ex::toString);
+
+            return Map.of(ERROR_MESSAGE_KEY, message);
         }
     }
 }

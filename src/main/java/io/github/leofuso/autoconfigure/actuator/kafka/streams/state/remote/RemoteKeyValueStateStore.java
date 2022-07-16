@@ -84,7 +84,14 @@ public interface RemoteKeyValueStateStore extends RemoteStateStore {
         final String hostname = host.host();
         final int port = host.port();
 
-        /* Maybe we should store this in a Cache to maintain the existent connections? */
+        /*
+         * Maybe we should store this in a Cache to maintain the existent connections?
+         * Yep, definitely.
+         * SEVERE: *~*~*~ Channel ManagedChannelImpl{logId=7, target=localhost:9090} was not shutdown properly!!! ~*~*~*
+         * Make sure to call shutdown()/shutdownNow() and wait until awaitTermination() returns true.
+         *
+         * We need to change this signature to receive a channel, as well, and manage it elsewhere.
+         */
         final ManagedChannel channel = ManagedChannelBuilder
                 .forAddress(hostname, port)
                 .usePlaintext()
