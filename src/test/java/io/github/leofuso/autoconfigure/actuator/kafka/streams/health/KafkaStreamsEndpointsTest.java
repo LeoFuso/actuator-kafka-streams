@@ -15,6 +15,7 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Produced;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,8 +65,11 @@ class KafkaStreamsEndpointsTest {
     private static final String EXCEPTION_KEY = "exception";
 
     @Test
+    @DisplayName(
+            "Given normal operation, health's indicator should be fine"
+    )
     void healthIndicatorUpTest() {
-        final ApplicationContextRunner runner = setup("ApplicationHealthTest-xyz");
+        final ApplicationContextRunner runner = setup("application-health-xyz");
         runner.run(context -> {
             final List<ProducerRecord<String, String>> records = List.of(
                     new ProducerRecord<>("in", "key", "value"),
@@ -76,8 +80,11 @@ class KafkaStreamsEndpointsTest {
     }
 
     @Test
+    @DisplayName(
+            "Given an exception, shutting down the client, health's indicator should be down"
+    )
     void healthIndicatorDownTest() {
-        ApplicationContextRunner runner = setup("ApplicationHealthTest-abc");
+        ApplicationContextRunner runner = setup("application-health-abc");
         runner.run(context -> {
             final List<ProducerRecord<String, String>> records = List.of(
                     new ProducerRecord<>("in", "key", "value"),
@@ -137,6 +144,7 @@ class KafkaStreamsEndpointsTest {
                         "logging.level.org.apache.kafka=OFF",
                         "server.port=0",
                         "spring.jmx.enabled=false",
+                        "management.endpoint.health.group.liveness.include=kStreams",
                         "spring.kafka.streams.properties.commit.interval.ms=1000",
                         "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
                         "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
@@ -147,9 +155,9 @@ class KafkaStreamsEndpointsTest {
                         AutoConfigurations.of(
                                 KafkaAutoConfiguration.class,
                                 StreamBuilderFactoryConfiguration.class,
+                                KafkaStreamsHealthIndicatorAutoConfiguration.class,
                                 KStreamApplication.class
-                        )
-                );
+                        ));
     }
 
     private ApplicationContextRunner setupTopology() {
@@ -162,7 +170,7 @@ class KafkaStreamsEndpointsTest {
                         "spring.kafka.streams.properties.commit.interval.ms=1000",
                         "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
                         "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
-                        "spring.kafka.streams.application-id=" + "ApplicationTopologyTest-abc",
+                        "spring.kafka.streams.application-id=" + "application-topology-abc",
                         "spring.kafka.bootstrap-servers=" + embeddedKafka.getBrokersAsString()
                 )
                 .withConfiguration(
@@ -171,8 +179,7 @@ class KafkaStreamsEndpointsTest {
                                 StreamBuilderFactoryConfiguration.class,
                                 KStreamApplication.class,
                                 TopologyEndpointAutoConfiguration.class
-                        )
-                );
+                        ));
     }
 
     private ApplicationContextRunner setupStateRestore() {
@@ -185,7 +192,7 @@ class KafkaStreamsEndpointsTest {
                         "spring.kafka.streams.properties.commit.interval.ms=1000",
                         "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
                         "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
-                        "spring.kafka.streams.application-id=" + "ApplicationTopologyTest-abc",
+                        "spring.kafka.streams.application-id=" + "application-statestorerestore-abc",
                         "spring.kafka.bootstrap-servers=" + embeddedKafka.getBrokersAsString()
                 )
                 .withConfiguration(
@@ -193,10 +200,8 @@ class KafkaStreamsEndpointsTest {
                                 StateRestoreEndpointAutoConfiguration.class,
                                 KafkaAutoConfiguration.class,
                                 KafkaStreamsDefaultConfiguration.class,
-                                StreamBuilderFactoryConfiguration.class,
-                                KStreamApplication.class
-                                )
-                );
+                                StreamBuilderFactoryConfiguration.class
+                                ));
     }
 
     private ApplicationContextRunner setupReadOnlyStateStore() {
@@ -221,8 +226,7 @@ class KafkaStreamsEndpointsTest {
                                 KafkaStreamsDefaultConfiguration.class,
                                 StreamBuilderFactoryConfiguration.class,
                                 KStreamApplication.class
-                        )
-                );
+                        ));
     }
 
     private ApplicationContextRunner setupReadOnlyStateStoreWithoutServerConfig() {
@@ -246,8 +250,7 @@ class KafkaStreamsEndpointsTest {
                                 KafkaStreamsDefaultConfiguration.class,
                                 StreamBuilderFactoryConfiguration.class,
                                 KStreamApplication.class
-                        )
-                );
+                        ));
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -366,15 +369,6 @@ class KafkaStreamsEndpointsTest {
                    .toTable(Named.as("in-store"))
                    .toStream(Named.as("in-store-stream"))
                    .to(OUT_TOPIC, Produced.as("out-producer"));
-        }
-
-        @Bean
-        public KafkaStreamsHealthIndicator kStreamsHealthIndicator(ObjectProvider<StreamsBuilderFactoryBean> factory) {
-            final StreamsBuilderFactoryBean factoryBean = factory.getIfAvailable();
-            if (factoryBean != null) {
-                return new KafkaStreamsHealthIndicator(factoryBean);
-            }
-            return null;
         }
     }
 }
