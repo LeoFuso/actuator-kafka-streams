@@ -13,6 +13,8 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.Grouped;
+import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Produced;
 import org.junit.jupiter.api.DisplayName;
@@ -107,16 +109,16 @@ class KafkaStreamsEndpointsTest {
                                        "    Source: in-consumer (topics: [in])\n" +
                                        "      --> filter\n" +
                                        "    Processor: filter (stores: [])\n" +
-                                       "      --> in-store\n" +
+                                       "      --> reduce\n" +
                                        "      <-- in-consumer\n" +
-                                       "    Processor: in-store (stores: [])\n" +
-                                       "      --> in-store-stream\n" +
+                                       "    Processor: reduce (stores: [sum-store])\n" +
+                                       "      --> sum-store-stream\n" +
                                        "      <-- filter\n" +
-                                       "    Processor: in-store-stream (stores: [])\n" +
-                                       "      --> out-producer\n" +
-                                       "      <-- in-store\n" +
-                                       "    Sink: out-producer (topic: out)\n" +
-                                       "      <-- in-store-stream");
+                                       "    Processor: sum-store-stream (stores: [])\n" +
+                                       "      --> sum-producer\n" +
+                                       "      <-- reduce\n" +
+                                       "    Sink: sum-producer (topic: out)\n" +
+                                       "      <-- sum-store-stream");
         });
     }
 
@@ -366,9 +368,17 @@ class KafkaStreamsEndpointsTest {
                        }
                        return true;
                    }, Named.as("filter"))
-                   .toTable(Named.as("in-store"))
-                   .toStream(Named.as("in-store-stream"))
-                   .to(OUT_TOPIC, Produced.as("out-producer"));
+                   .groupByKey(Grouped.as("group-by"))
+                   .reduce((v1, v2) -> {
+                       try {
+                           final Long n1 = Long.valueOf(v1);
+                           final Long n2 = Long.valueOf(v2);
+                           final long n3 = n1 + n2;
+                           return Long.toString(n3);
+                       } catch (Exception ignored) { return v2; }
+                   }, Named.as("reduce"), Materialized.as("sum-store"))
+                   .toStream(Named.as("sum-store-stream"))
+                   .to(OUT_TOPIC, Produced.as("sum-producer"));
         }
     }
 }
