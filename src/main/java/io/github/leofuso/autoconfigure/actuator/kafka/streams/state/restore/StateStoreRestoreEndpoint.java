@@ -12,7 +12,7 @@ import static org.springframework.boot.actuate.endpoint.annotation.Selector.Matc
 /**
  * Actuator endpoint for {@link org.apache.kafka.streams.processor.StateRestoreListener restoration} queries.
  */
-@Endpoint(id = "stateStoreRestore")
+@Endpoint(id = "statestorerestore")
 public class StateStoreRestoreEndpoint {
 
     private final StateStoreRestoreRepository repository;

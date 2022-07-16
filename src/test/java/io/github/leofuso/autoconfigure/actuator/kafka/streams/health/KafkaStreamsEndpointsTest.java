@@ -18,9 +18,6 @@ import org.apache.kafka.streams.kstream.Produced;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.actuate.autoconfigure.beans.BeansEndpointAutoConfiguration;
-import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
-import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointAutoConfiguration;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -46,6 +43,8 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.InteractiveQueryEndpointAutoConfiguration;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.ReadOnlyStateStoreEndpoint;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateStoreRestoreEndpoint;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateRestoreEndpointAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpoint;
@@ -120,6 +119,18 @@ class KafkaStreamsEndpointsTest {
         runner.run(context -> assertThat(context).hasSingleBean(StateStoreRestoreEndpoint.class));
     }
 
+    @Test
+    void readonlystatestoreEndpointTest() {
+        ApplicationContextRunner runner = setupReadOnlyStateStore();
+        runner.run(context -> assertThat(context).hasSingleBean(ReadOnlyStateStoreEndpoint.class));
+    }
+
+    @Test
+    void readonlystatestoreEndpointMissingTest() {
+        ApplicationContextRunner runner = setupReadOnlyStateStoreWithoutServerConfig();
+        runner.run(context -> assertThat(context).doesNotHaveBean(ReadOnlyStateStoreEndpoint.class));
+    }
+
     private ApplicationContextRunner setup(String applicationId) {
         return new ApplicationContextRunner()
                 .withPropertyValues(
@@ -168,7 +179,7 @@ class KafkaStreamsEndpointsTest {
         return new ApplicationContextRunner()
                 .withPropertyValues(
                         "logging.level.org.apache.kafka=OFF",
-                        "management.endpoints.web.exposure.include=stateStoreRestore",
+                        "management.endpoints.web.exposure.include=statestorerestore",
                         "server.port=0",
                         "spring.jmx.enabled=false",
                         "spring.kafka.streams.properties.commit.interval.ms=1000",
@@ -185,6 +196,57 @@ class KafkaStreamsEndpointsTest {
                                 StreamBuilderFactoryConfiguration.class,
                                 KStreamApplication.class
                                 )
+                );
+    }
+
+    private ApplicationContextRunner setupReadOnlyStateStore() {
+        return new ApplicationContextRunner()
+                .withPropertyValues(
+                        "logging.level.org.apache.kafka=OFF",
+                        "management.endpoints.web.exposure.include=readonlystatestore",
+                        "server.port=0",
+                        "spring.jmx.enabled=false",
+                        "spring.kafka.streams.properties.commit.interval.ms=1000",
+                        "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
+                        "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
+                        "spring.kafka.streams.properties.application.server=localhost:9090",
+                        "spring.kafka.streams.properties.additional.serdes=org.apache.kafka.common.serialization.Serdes$LongSerde",
+                        "spring.kafka.streams.application-id=" + "application-readonlystatestore-abc",
+                        "spring.kafka.bootstrap-servers=" + embeddedKafka.getBrokersAsString()
+                )
+                .withConfiguration(
+                        AutoConfigurations.of(
+                                InteractiveQueryEndpointAutoConfiguration.class,
+                                KafkaAutoConfiguration.class,
+                                KafkaStreamsDefaultConfiguration.class,
+                                StreamBuilderFactoryConfiguration.class,
+                                KStreamApplication.class
+                        )
+                );
+    }
+
+    private ApplicationContextRunner setupReadOnlyStateStoreWithoutServerConfig() {
+        return new ApplicationContextRunner()
+                .withPropertyValues(
+                        "logging.level.org.apache.kafka=OFF",
+                        "management.endpoints.web.exposure.include=readonlystatestore",
+                        "server.port=0",
+                        "spring.jmx.enabled=false",
+                        "spring.kafka.streams.properties.commit.interval.ms=1000",
+                        "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
+                        "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
+                        "spring.kafka.streams.properties.additional.serdes=org.apache.kafka.common.serialization.Serdes$LongSerde",
+                        "spring.kafka.streams.application-id=" + "application-readonlystatestore-abc",
+                        "spring.kafka.bootstrap-servers=" + embeddedKafka.getBrokersAsString()
+                )
+                .withConfiguration(
+                        AutoConfigurations.of(
+                                InteractiveQueryEndpointAutoConfiguration.class,
+                                KafkaAutoConfiguration.class,
+                                KafkaStreamsDefaultConfiguration.class,
+                                StreamBuilderFactoryConfiguration.class,
+                                KStreamApplication.class
+                        )
                 );
     }
 
