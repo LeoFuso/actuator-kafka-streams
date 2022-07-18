@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Used as a State carrier of all restorations performed during the lifecycle of the Stream application.
  */
-public class ConcurrentStateStoreRestoreCarrier implements StateRestoreListener, StateStoreRestoreRepository {
+public class ConcurrentStateStoreRestoreCarrier implements StateStoreRestoreRepository {
 
     private static final Logger logger = LoggerFactory.getLogger(ConcurrentStateStoreRestoreCarrier.class);
 

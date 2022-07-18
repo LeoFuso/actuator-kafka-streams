@@ -1,6 +1,5 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote;
 
-import java.time.Duration;
 import java.util.function.Function;
 
 import org.apache.kafka.streams.state.QueryableStoreType;
@@ -18,8 +17,11 @@ public interface RemoteStateStoreStub extends RemoteStateStore {
 
     void initialize();
 
-    void shutdown() throws InterruptedException;
 
-    void shutdown(Duration timeout) throws InterruptedException;
+    /**
+     * Starts a shutdown process for the {@link io.grpc.Channel channel} associated with this
+     * {@link RemoteStateStoreStub stub}.
+     */
+    void shutdown();
 
 }

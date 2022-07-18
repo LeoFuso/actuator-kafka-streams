@@ -1,8 +1,8 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint;
 
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.errors.StreamsNotStartedException;
+import org.apache.kafka.streams.state.HostInfo;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.endpoint.condition.ConditionalOnAvailableEndpoint;
@@ -19,37 +19,33 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
 import com.google.protobuf.Service;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.CompositeStateAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.DefaultHostManager;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.DefaultRemoteQuerySupport;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.HostManager;
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.GrpcChannelConfigurer;
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.GrpcServerConfigurer;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.LocalKeyValueStore;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteQuerySupport;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteStateStore;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteStateStoreService;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.GrpcChannelConfigurer;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.GrpcServerConfigurer;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.PlainTextChannelConfigurer;
 import io.grpc.Server;
+import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 
+import static java.util.Optional.ofNullable;
 import static org.apache.kafka.streams.StreamsConfig.APPLICATION_SERVER_CONFIG;
 
 
-@AutoConfiguration(after = {EndpointAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class})
-@ConditionalOnClass({Server.class, Service.class, StreamObserver.class, KafkaStreamsDefaultConfiguration.class, Endpoint.class})
+@AutoConfiguration(
+        before = {CompositeStateAutoConfiguration.class},
+        after = {EndpointAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class}
+)
+@ConditionalOnClass({Server.class, Service.class, StreamObserver.class, Endpoint.class})
 @ConditionalOnBean({StreamsBuilderFactoryBean.class})
 @ConditionalOnProperty(prefix = "spring.kafka", name = {"streams.properties." + APPLICATION_SERVER_CONFIG})
 public class InteractiveQueryEndpointAutoConfiguration {
-
-    @Bean
-    @ConditionalOnMissingBean
-    public LocalKeyValueStore localKeyValueStore(ObjectProvider<StreamsBuilderFactoryBean> provider) {
-        final StreamsBuilderFactoryBean factory = provider.getIfAvailable();
-        if (factory != null) {
-            return new LocalKeyValueStore(factory);
-        }
-        return null;
-    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -57,21 +53,88 @@ public class InteractiveQueryEndpointAutoConfiguration {
         return new PlainTextChannelConfigurer();
     }
 
-    @Bean(destroyMethod = "shutdown")
-    @ConditionalOnMissingBean
-    public HostManager hostManager(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
-                                          ObjectProvider<RemoteStateStore> stores,
-                                          ObjectProvider<GrpcChannelConfigurer> configurers) {
-
-        final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
+    @Bean
+    @ConditionalOnMissingBean(LocalKeyValueStore.class)
+    @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
+    public RemoteStateStore remoteKeyValueStateStore(ObjectProvider<StreamsBuilderFactoryBean> provider) {
+        final StreamsBuilderFactoryBean factory = provider.getIfAvailable();
         if (factory != null) {
-            return new DefaultHostManager(factory, stores.stream(), configurers.stream());
+            return new LocalKeyValueStore(factory);
+        }
+        return null;
+    }
+
+    @Bean(destroyMethod = "cleanUp")
+    @ConditionalOnMissingBean(HostManager.class)
+    public HostManager hostManager(ObjectProvider<StreamsBuilderFactoryBean> provider,
+                                   ObjectProvider<RemoteStateStore> stores,
+                                   ObjectProvider<GrpcChannelConfigurer> configurers) {
+
+        final StreamsBuilderFactoryBean factory = provider.getIfAvailable();
+        if (factory != null) {
+            return new DefaultHostManager(factory, stores.orderedStream(), configurers.orderedStream());
         }
         return null;
     }
 
     @Bean
+    @ConditionalOnMissingBean(HostManager.CleanUpListener.class)
+    public HostManager.CleanUpListener hostManagerCleanUpListener(ObjectProvider<HostManager> provider) {
+        final HostManager manager = provider.getIfAvailable();
+        if (manager != null) {
+            return new HostManager.CleanUpListener(manager);
+        }
+        return null;
+    }
+
+
+    @Bean(
+            initMethod = "start",
+            destroyMethod = "shutdown"
+    )
     @ConditionalOnMissingBean
+    @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
+    public Server gRpcStateStoreServer(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
+                                       ObjectProvider<GrpcServerConfigurer> configurers,
+                                       ObjectProvider<HostManager> managerProvider) {
+
+        final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
+        final HostManager manager = managerProvider.getIfAvailable();
+
+        return ofNullable(factory)
+                .filter(f -> manager != null)
+                .map(StreamsBuilderFactoryBean::getStreamsConfiguration)
+                .map(StreamsConfig::new)
+                .map(config -> config.getString(StreamsConfig.APPLICATION_SERVER_CONFIG))
+                .map(HostInfo::buildFromEndpoint)
+                .map(info -> {
+
+                    final RemoteStateStoreService service = new RemoteStateStoreService(manager);
+                    final int port = info.port();
+                    final ServerBuilder<?> builder =
+                            configurers.orderedStream()
+                                       .reduce(
+
+                                               ServerBuilder.forPort(port)
+                                                            .addService(service),
+
+                                               (ServerBuilder<?> acc, GrpcServerConfigurer config) ->
+                                                       config.configure(acc),
+
+                                               (b1, b2) -> b2
+                                       );
+                    return builder.build();
+
+                })
+                .orElseThrow(() -> {
+                    final String message =
+                            "KafkaStreams has not been started, or hasn't been configured. Try again later.";
+                    return new StreamsNotStartedException(message);
+                });
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(RemoteQuerySupport.class)
     public RemoteQuerySupport remoteQuerySupport(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
                                                  ObjectProvider<HostManager> managerProvider,
                                                  ObjectProvider<ConversionService> converterProvider) {
@@ -94,23 +157,6 @@ public class InteractiveQueryEndpointAutoConfiguration {
         final RemoteQuerySupport support = provider.getIfAvailable();
         if (support != null) {
             return new ReadOnlyStateStoreEndpoint(support);
-        }
-        return null;
-    }
-
-
-    @ConditionalOnMissingBean
-    @Bean(initMethod = "start", destroyMethod = "shutdown")
-    @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
-    public Server gRpcStateStoreServer(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
-                                       ObjectProvider<GrpcServerConfigurer> configurers,
-                                       ObjectProvider<RemoteQuerySupport> supportProvider) {
-
-        final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
-        final RemoteQuerySupport support = supportProvider.getIfAvailable();
-
-        if (factory != null && support != null) {
-            return RemoteStateStoreService.getServerInstance(factory, configurers.orderedStream(), support);
         }
         return null;
     }

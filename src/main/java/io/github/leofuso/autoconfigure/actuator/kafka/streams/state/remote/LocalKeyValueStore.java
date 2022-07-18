@@ -36,13 +36,12 @@ public class LocalKeyValueStore implements RemoteKeyValueStateStore {
      */
     public LocalKeyValueStore(final StreamsBuilderFactoryBean factory) {
         this.factory = Objects.requireNonNull(factory, "StreamsBuilderFactoryBean [factory] is required.");
-        this.self =
-                Optional.of(factory)
-                        .map(StreamsBuilderFactoryBean::getStreamsConfiguration)
-                        .map(StreamsConfig::new)
-                        .map(config -> config.getString(StreamsConfig.APPLICATION_SERVER_CONFIG))
-                        .map(HostInfo::buildFromEndpoint)
-                        .orElseThrow();
+        this.self = Optional.of(factory)
+                            .map(StreamsBuilderFactoryBean::getStreamsConfiguration)
+                            .map(StreamsConfig::new)
+                            .map(config -> config.getString(StreamsConfig.APPLICATION_SERVER_CONFIG))
+                            .map(HostInfo::buildFromEndpoint)
+                            .orElseThrow();
     }
 
     public HostInfo self() {

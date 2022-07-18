@@ -129,21 +129,13 @@ public class KeyValueStateStoreStub implements RemoteKeyValueStateStore, RemoteS
     }
 
     @Override
-    public void shutdown() throws InterruptedException {
-        final Duration now = Duration.ofMillis(0);
-        shutdown(now);
-    }
-
-    @Override
-    public void shutdown(final Duration timeout) throws InterruptedException {
+    public void shutdown() {
         if (!initialized) {
             throw new IllegalStateException("You can't invoke a shutdown before the stub initialization.");
         }
-
         if (stub != null && stub.getChannel() instanceof ManagedChannel) {
             final ManagedChannel channel = (ManagedChannel) stub.getChannel();
             channel.shutdown();
-            channel.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS);
         }
     }
 }

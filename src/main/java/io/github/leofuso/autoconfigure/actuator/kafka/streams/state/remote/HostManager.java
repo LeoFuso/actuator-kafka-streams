@@ -1,10 +1,16 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.QueryableStoreType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.apache.kafka.streams.KafkaStreams.State;
+import static org.apache.kafka.streams.KafkaStreams.StateListener;
 
 /**
  * Responsible for managing the lifecycle of all created channels between a {@link HostInfo host} and its
@@ -40,6 +46,33 @@ public interface HostManager {
      */
     <R extends RemoteStateStore> Optional<R> findStore(HostInfo host, QueryableStoreType<?> storeType);
 
-    void shutdown() throws InterruptedException;
+    /**
+     * Performs a clean-up by starting a shutdown process for all {@link RemoteStateStore stores} associated with this
+     * {@link HostManager manager}, and removing all associated {@link HostInfo hosts} with it.
+     */
+    void cleanUp();
+
+    /**
+     * A {@link StateListener listener} that performs a {@link HostManager#cleanUp() clean-up} everytime a
+     * {@link org.apache.kafka.streams.KafkaStreams stream} enters a {@link State#REBALANCING rebalancing} state.
+     */
+    class CleanUpListener implements StateListener {
+
+        private static final Logger logger = LoggerFactory.getLogger(CleanUpListener.class);
+
+        private final HostManager manager;
+
+        public CleanUpListener(final HostManager manager) {
+            this.manager = Objects.requireNonNull(manager, "HostManager [manager] is required.");
+        }
+
+        @Override
+        public void onChange(final State newState, final State oldState) {
+            if (newState == State.REBALANCING) {
+                logger.info("Starting HostManager clean-up, gRPC services may be temporally unavailable.");
+                manager.cleanUp();
+            }
+        }
+    }
 
 }

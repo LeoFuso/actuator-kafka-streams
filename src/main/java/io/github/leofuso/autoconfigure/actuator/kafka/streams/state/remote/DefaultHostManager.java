@@ -1,5 +1,6 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -13,6 +14,8 @@ import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.errors.StreamsNotStartedException;
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.QueryableStoreType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.GrpcChannelConfigurer;
@@ -23,6 +26,8 @@ import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.
  */
 public class DefaultHostManager implements HostManager {
 
+    private static final Logger logger = LoggerFactory.getLogger(DefaultHostManager.class);
+
     private final ConcurrentHashMap<HostInfo, RemoteStateStore> stores;
 
     private final StreamsBuilderFactoryBean factory;
@@ -30,7 +35,6 @@ public class DefaultHostManager implements HostManager {
     private final Set<RemoteStateStore> supported;
 
     private final Set<GrpcChannelConfigurer> configuration;
-
 
     public DefaultHostManager(StreamsBuilderFactoryBean factory,
                               Stream<RemoteStateStore> supported,
@@ -69,6 +73,7 @@ public class DefaultHostManager implements HostManager {
                 return Optional.of(store);
             }
         }
+        logger.trace("Unable to locate host by ref[{}]", reference);
         return Optional.empty();
     }
 
@@ -89,25 +94,34 @@ public class DefaultHostManager implements HostManager {
             }
 
             final R remote = supported.stub(host);
+            final String ref = remote.reference();
             if (remote instanceof RemoteStateStoreStub) {
                 final RemoteStateStoreStub stub = (RemoteStateStoreStub) remote;
                 configuration.forEach(config -> stub.configure(config::configure));
+                logger.info("Initializing a new host[{}:{}] with ref[{}]", host.host(), host.port(), ref);
                 stub.initialize();
             }
 
+            logger.trace("Adding host[{}:{}] with ref[{}] to known hosts.", host.host(), host.host(), ref);
             stores.put(host, remote);
             return Optional.of(remote);
         }
+        logger.trace("Unable to locate host[{}:{}] for type[{}]", host.host(), host.port(), storeType.getClass());
         return Optional.empty();
     }
 
     @Override
-    public void shutdown() throws InterruptedException {
-        for (RemoteStateStore store : stores.values()) {
+    public void cleanUp() {
+        logger.info("Starting HostManager clean-up, gRPC services may be temporally unavailable.");
+        for (Map.Entry<HostInfo, RemoteStateStore> entry : stores.entrySet()) {
+            final RemoteStateStore store = entry.getValue();
             if (store instanceof RemoteStateStoreStub) {
                 final RemoteStateStoreStub stub = (RemoteStateStoreStub) store;
                 stub.shutdown();
             }
+            final HostInfo host = entry.getKey();
+            logger.warn("Removing [{}:{}] from known hosts.", host.host(), host.port());
+            stores.remove(host);
         }
     }
 }

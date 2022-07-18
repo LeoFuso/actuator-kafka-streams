@@ -22,33 +22,16 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
 public class StateRestoreEndpointAutoConfiguration {
 
     @Bean
-    @ConditionalOnMissingBean
-    public ConcurrentStateStoreRestoreCarrier stateRestoreRepository(ObjectProvider<Clock> clockProvider) {
+    @ConditionalOnMissingBean(StateStoreRestoreRepository.class)
+    public StateRestoreListener stateRestoreRepository(ObjectProvider<Clock> clockProvider) {
         final Clock clock = clockProvider.getIfAvailable(Clock::systemUTC);
         return new ConcurrentStateStoreRestoreCarrier(clock);
     }
 
     @Bean
-    @ConditionalOnMissingBean(CompositeStateRestoreListener.class)
-    public CompositeStateRestoreListener compositeStateRestoreListener(ObjectProvider<StateRestoreListener> restoreListeners) {
-        final Set<StateRestoreListener> orderedListeners = restoreListeners.orderedStream().collect(Collectors.toSet());
-        return new DefaultCompositeStateRestoreListener(orderedListeners);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(name = "compositeStateRestoreListenerConfigurer")
-    public StreamsBuilderFactoryBeanConfigurer compositeStateRestoreListenerConfigurer(ObjectProvider<CompositeStateRestoreListener> compositeProvider) {
-        final CompositeStateRestoreListener listener = compositeProvider.getIfAvailable();
-        if (listener != null) {
-            return fb -> fb.setStateRestoreListener(listener);
-        }
-        return null;
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(name = "stateStoreRestoreEndpoint")
-    public StateStoreRestoreEndpoint stateStoreRestoreEndpoint(ObjectProvider<StateStoreRestoreRepository> repositoryProvider) {
-        final StateStoreRestoreRepository repository = repositoryProvider.getIfAvailable();
+    @ConditionalOnMissingBean(StateStoreRestoreEndpoint.class)
+    public StateStoreRestoreEndpoint stateStoreRestoreEndpoint(ObjectProvider<StateStoreRestoreRepository> provider) {
+        final StateStoreRestoreRepository repository = provider.getIfAvailable();
         if (repository != null) {
             return new StateStoreRestoreEndpoint(repository);
         }
