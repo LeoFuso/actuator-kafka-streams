@@ -3,6 +3,7 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.health;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,8 +14,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
@@ -70,6 +69,9 @@ import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.Kafk
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsEndpointsTest.OUT_TOPIC;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsEndpointsTest.SUM_IN_TOPIC;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsEndpointsTest.SUM_OUT_TOPIC;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG;
+import static org.apache.kafka.clients.producer.ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG;
 import static org.apache.kafka.common.serialization.Serdes.Integer;
 import static org.apache.kafka.common.serialization.Serdes.UUID;
 import static org.apache.kafka.common.serialization.Serdes.UUIDSerde;
@@ -129,7 +131,7 @@ class KafkaStreamsEndpointsTest {
 
             File file = ResourceUtils.getFile("classpath:topology.txt");
 
-            /* Files.writeString(file.toPath(), actualTopology, StandardCharsets.UTF_8) */;
+            /* Files.writeString(file.toPath(), actualTopology, StandardCharsets.UTF_8) */
 
             final String expectedTopology = Files.readString(file.toPath());
             assertThat(actualTopology)
@@ -194,17 +196,16 @@ class KafkaStreamsEndpointsTest {
     )
     void readonlystatestoreRemotelyEndpointTest() {
 
-        ApplicationContextRunner server = setupReadOnlyStateStore(9090);
+        ApplicationContextRunner server = setupReadOnlyStateStore(9990);
         server.run(serverContext -> {
 
-            final Set<String> keys = IntStream.range(0, 5)
-                                              .mapToObj(ignored ->
-                                                                UUID.randomUUID()
-                                                                    .toString()
-                                              )
-                                              .collect(Collectors.toSet());
+            final Set<String> keys = IntStream
+                    .range(0, 5)
+                    .mapToObj(ignored -> UUID.randomUUID())
+                    .map(UUID::toString)
+                    .collect(Collectors.toSet());
 
-            ApplicationContextRunner client = setupReadOnlyStateStore(9091);
+            ApplicationContextRunner client = setupReadOnlyStateStore(9991);
             client.run(clientContext -> {
 
                 for (String key : keys) {
@@ -227,20 +228,21 @@ class KafkaStreamsEndpointsTest {
                             .containsExactly(Map.entry(key, "3"));
                 }
 
+                for (String key : keys) {
+
+                    final ReadOnlyStateStoreEndpoint serverEndpoint =
+                            serverContext.getBean(ReadOnlyStateStoreEndpoint.class);
+
+                    final Map<String, String> response =
+                            serverEndpoint.find("sum-store", key, UUIDSerde.class.getName());
+
+                    assertThat(response)
+                            .isNotEmpty()
+                            .containsExactly(Map.entry(key, "3"));
+                }
+                clientContext.registerShutdownHook();
             });
-
-            for (String key : keys) {
-
-                final ReadOnlyStateStoreEndpoint serverEndpoint =
-                        serverContext.getBean(ReadOnlyStateStoreEndpoint.class);
-
-                final Map<String, String> response =
-                        serverEndpoint.find("sum-store", key, UUIDSerde.class.getName());
-
-                assertThat(response)
-                        .isNotEmpty()
-                        .containsExactly(Map.entry(key, "3"));
-            }
+            serverContext.registerShutdownHook();
         });
     }
 
@@ -317,12 +319,15 @@ class KafkaStreamsEndpointsTest {
                         "management.endpoints.web.exposure.include=readonlystatestore",
                         "server.port=0",
                         "spring.jmx.enabled=false",
+                        "spring.kafka.streams.cleanup.on-startup=true",
                         "spring.kafka.streams.properties.commit.interval.ms=1000",
+                        "spring.kafka.streams.properties.num.stream.threads=1",
+                        "spring.kafka.streams.properties.consumer.group.instance.id=application-readonlystatestore-abc" + port,
                         "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
                         "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
                         "spring.kafka.streams.properties.application.server=localhost:" + port,
                         "spring.kafka.streams.properties.additional.serdes=org.apache.kafka.common.serialization.Serdes$LongSerde",
-                        "spring.kafka.streams.application-id=" + "application-readonlystatestore-abc",
+                        "spring.kafka.streams.application-id=application-readonlystatestore-abc",
                         "spring.kafka.streams.properties.state.dir=./local-state-store/" + port,
                         "spring.kafka.bootstrap-servers=" + embeddedKafka.getBrokersAsString()
                 )
@@ -373,13 +378,13 @@ class KafkaStreamsEndpointsTest {
     private void receive(List<ProducerRecord<String, String>> records, String... topics) throws Exception {
 
         Map<String, Object> consumerProps = KafkaTestUtils.consumerProps("group-id0", "false", embeddedKafka);
-        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+        consumerProps.put(AUTO_OFFSET_RESET_CONFIG, "earliest");
+        consumerProps.put(KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
 
         DefaultKafkaConsumerFactory<String, String> cf = new DefaultKafkaConsumerFactory<>(consumerProps);
 
         Map<String, Object> producerProps = KafkaTestUtils.producerProps(embeddedKafka);
-        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+        producerProps.put(KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
         DefaultKafkaProducerFactory<String, String> pf = new DefaultKafkaProducerFactory<>(producerProps);
 
         try (Consumer<String, String> consumer = cf.createConsumer()) {
@@ -405,7 +410,7 @@ class KafkaStreamsEndpointsTest {
 
             latch.await(5, TimeUnit.SECONDS);
             embeddedKafka.consumeFromEmbeddedTopics(consumer, topics);
-            TimeUnit.SECONDS.sleep(10);
+            TimeUnit.SECONDS.sleep(5);
             KafkaTestUtils.getRecords(consumer, 1000);
         } finally {
             pf.destroy();
@@ -487,30 +492,35 @@ class KafkaStreamsEndpointsTest {
                    .transform(() -> new Transformer<String, String, KeyValue<UUID, Integer>>() {
                        @Override
                        public void init(final ProcessorContext context) {}
+
                        @Override
                        public KeyValue<UUID, Integer> transform(final String key, final String value) {
                            return new KeyValue<>(UUID.fromString(key), Integer.valueOf(value));
                        }
+
                        @Override
                        public void close() {}
                    }, Named.as("sum-to-uuid"))
                    .groupByKey(Grouped.<UUID, Integer>as("sum-group-by")
                                       .withKeySerde(UUID())
-                                       .withValueSerde(Integer()))
+                                      .withValueSerde(Integer()))
                    .reduce(
                            Integer::sum,
                            Named.as("sum"),
                            Materialized.<UUID, Integer, KeyValueStore<Bytes, byte[]>>as("sum-store")
                                        .withKeySerde(UUID())
                                        .withValueSerde(Serdes.Integer())
-                   ).toStream(Named.as("sum-as-stream"))
+                   )
+                   .toStream(Named.as("sum-as-stream"))
                    .transform(() -> new Transformer<UUID, Integer, KeyValue<String, String>>() {
                        @Override
                        public void init(final ProcessorContext context) {}
+
                        @Override
                        public KeyValue<String, String> transform(final UUID key, final Integer value) {
                            return new KeyValue<>(key.toString(), value.toString());
                        }
+
                        @Override
                        public void close() {}
                    }, Named.as("sum-to-string"))

@@ -9,7 +9,6 @@ import org.apache.kafka.streams.state.QueryableStoreType;
 import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.StateStoreGrpc;
-import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
 import static org.apache.kafka.streams.state.QueryableStoreTypes.keyValueStore;
@@ -69,7 +68,7 @@ public interface RemoteKeyValueStateStore extends RemoteStateStore {
 
     /**
      * @param host used to locate the {@link RemoteKeyValueStateStore store}.
-     * @param <R>  the type of the wanted {@link RemoteKeyValueStateStore store}.
+     * @param <R>  the wanted {@link RemoteKeyValueStateStore store} type.
      * @return a stub for this {@link RemoteKeyValueStateStore store}, or the real one, if a proxy creation is
      * unnecessary.
      */
@@ -83,23 +82,12 @@ public interface RemoteKeyValueStateStore extends RemoteStateStore {
 
         final String hostname = host.host();
         final int port = host.port();
+        
+        final ManagedChannelBuilder<?> builder = ManagedChannelBuilder
+                .forAddress(hostname, port);
 
-        /*
-         * Maybe we should store this in a Cache to maintain the existent connections?
-         * Yep, definitely.
-         * SEVERE: *~*~*~ Channel ManagedChannelImpl{logId=7, target=localhost:9090} was not shutdown properly!!! ~*~*~*
-         * Make sure to call shutdown()/shutdownNow() and wait until awaitTermination() returns true.
-         *
-         * We need to change this signature to receive a channel, as well, and manage it elsewhere.
-         */
-        final ManagedChannel channel = ManagedChannelBuilder
-                .forAddress(hostname, port)
-                .usePlaintext()
-                .build();
-
-        final StateStoreGrpc.StateStoreStub stub = StateStoreGrpc.newStub(channel);
         @SuppressWarnings("unchecked")
-        final R remoteStub = (R) new KeyValueStateStoreStub(stub, host);
+        final R remoteStub = (R) new KeyValueStateStoreStub(builder);
         return remoteStub;
     }
 

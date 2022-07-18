@@ -15,6 +15,7 @@ import com.google.protobuf.ByteString;
 
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.exceptions.MissingMethodException;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.exceptions.MissingStoreException;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.GrpcServerConfigurer;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Invocation;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.StateStoreGrpc;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.Value;

@@ -1,11 +1,11 @@
-package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote;
+package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc;
 
 import org.springframework.core.Ordered;
 
 import io.grpc.ServerBuilder;
 
 /**
- * A Configurer that can be implemented to customize a {@link io.grpc.Server server} before its creation.
+ * A Configurer that can be used to configure a {@link io.grpc.Server server} before its creation.
  */
 public interface GrpcServerConfigurer extends Ordered {
 
