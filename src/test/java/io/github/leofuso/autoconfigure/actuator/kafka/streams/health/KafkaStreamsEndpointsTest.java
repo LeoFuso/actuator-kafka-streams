@@ -446,8 +446,8 @@ class KafkaStreamsEndpointsTest {
                         ));
     }
 
-    @Configuration
-    @EnableKafkaStreams
+   // @Configuration
+   // @EnableKafkaStreams
     public static class StreamBuilderFactoryConfiguration {
 
         @Bean
