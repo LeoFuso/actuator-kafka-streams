@@ -6,9 +6,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
-import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
-
-import static org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
 
 @Configuration
 @EnableKafkaStreams
@@ -22,10 +19,4 @@ public class StreamBuilderFactoryConfiguration {
         }
         return new KafkaStreamsConfiguration(properties.buildStreamsProperties());
     }
-
-    @Bean
-    public StreamsBuilderFactoryBeanConfigurer streamsUncaughtExceptionHandlerConfigurer() {
-        return fb -> fb.setStreamsUncaughtExceptionHandler(exception -> SHUTDOWN_CLIENT);
-    }
-
 }
