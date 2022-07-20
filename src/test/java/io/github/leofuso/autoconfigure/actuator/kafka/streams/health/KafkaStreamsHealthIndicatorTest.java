@@ -26,6 +26,7 @@ import org.springframework.kafka.test.context.EmbeddedKafka;
 
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.health.setup.StreamBuilderFactoryConfiguration;
 
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.utils.KafkaStreamTestUtils.addRandomTopic;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.utils.KafkaStreamTestUtils.expect;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.utils.KafkaStreamTestUtils.produce;
 import static org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.REPLACE_THREAD;
@@ -33,7 +34,7 @@ import static org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler.St
 import static org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EmbeddedKafka(topics = {"in", "out"},
+@EmbeddedKafka(topics = {"out"},
                partitions = 3,
                brokerProperties = {
                        "group.min.session.timeout.ms=10",
@@ -48,8 +49,8 @@ class KafkaStreamsHealthIndicatorTest {
         this.broker = broker;
     }
 
-    private static final String ILLEGAL_ARG_EXP_KEY = "illegalArgException";
-    private static final String NPE_ARG_EXP_KEY = "npException";
+    private static final String ILLEGAL_ARG_EXP_KEY = "ILLEGAL_ARGUMENT";
+    private static final String NPE_ARG_EXP_KEY = "NULL_POINTER";
 
     @Test
     @DisplayName("Given enabled indicator, when App finishes starting, then bean should be found")
@@ -83,12 +84,14 @@ class KafkaStreamsHealthIndicatorTest {
     @DisplayName("Given normal op, some records, when asked for HC, then should return Up")
     void th3() {
         /* Given */
+
+        final String topic = addRandomTopic(broker);
         healthCheck(true).run(context -> {
             final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
             produce(
                     broker,
-                    new ProducerRecord<>("in", "key", "some-value"),
-                    new ProducerRecord<>("in", "key", "other-value")
+                    new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
+                    new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "other-value")
             );
             /* When & Then */
             expect(indicator, Status.UP);
@@ -99,6 +102,7 @@ class KafkaStreamsHealthIndicatorTest {
     @DisplayName("Given faulty record (NPE) and shutdown client handling, when asked for HC, then should return Down")
     void th4() {
         /* Given */
+        final String topic = addRandomTopic(broker);
         healthCheck(true)
                 .withBean(
                         StreamsBuilderFactoryBeanCustomizer.class,
@@ -109,9 +113,9 @@ class KafkaStreamsHealthIndicatorTest {
                     expect(indicator, Status.UP);
                     produce(
                             broker,
-                            new ProducerRecord<>("in", "key", "some-value"),
-                            new ProducerRecord<>("in", NPE_ARG_EXP_KEY, "exception-value"),
-                            new ProducerRecord<>("in", "key", "other-value")
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, NPE_ARG_EXP_KEY, "exception-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "other-value")
                     );
                     /* When & Then */
                     expect(indicator, Status.DOWN);
@@ -122,6 +126,7 @@ class KafkaStreamsHealthIndicatorTest {
     @DisplayName("Given faulty record(NPE), and shutdown app handling, when asked for HC, then should return Down")
     void th5() {
         /* Given */
+        final String topic = addRandomTopic(broker);
         healthCheck(true)
                 .withBean(
                         StreamsBuilderFactoryBeanCustomizer.class,
@@ -132,9 +137,9 @@ class KafkaStreamsHealthIndicatorTest {
                     expect(indicator, Status.UP);
                     produce(
                             broker,
-                            new ProducerRecord<>("in", "key", "some-value"),
-                            new ProducerRecord<>("in", NPE_ARG_EXP_KEY, "exception-value"),
-                            new ProducerRecord<>("in", "key", "other-value")
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, NPE_ARG_EXP_KEY, "exception-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "other-value")
                     );
                     /* When & Then */
                     expect(indicator, Status.DOWN, Duration.ofSeconds(3));
@@ -145,6 +150,7 @@ class KafkaStreamsHealthIndicatorTest {
     @DisplayName("Given faulty record(NPE), and replace thread handling, when asked for HC, then should return Up")
     void th6() {
         /* Given */
+        final String topic = addRandomTopic(broker);
         healthCheck(true)
                 .withBean(
                         StreamsBuilderFactoryBeanCustomizer.class,
@@ -153,20 +159,21 @@ class KafkaStreamsHealthIndicatorTest {
                 .run(context -> {
                     final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
                     expect(indicator, Status.UP);
+
                     produce(
                             broker,
-                            new ProducerRecord<>("in", 0, "key", "some-value"),
-                            new ProducerRecord<>("in", 1, "key", "some-value"),
-                            new ProducerRecord<>("in", 2, "key", "some-value"),
-                            new ProducerRecord<>("in", 0, NPE_ARG_EXP_KEY, "exception-value"),
-                            new ProducerRecord<>("in", 1, "key", "other-value"),
-                            new ProducerRecord<>("in", 2, "key", "other-value")
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, NPE_ARG_EXP_KEY, "exception-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "other-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "other-value")
                     );
                     produce(
                             broker,
-                            new ProducerRecord<>("in", 0, "key", "some-value"),
-                            new ProducerRecord<>("in", 1, "key", "some-other-value"),
-                            new ProducerRecord<>("in", 2, "key", "and-other-value")
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-other-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "and-other-value")
                     );
                     /* When & Then */
                     expect(indicator, Status.UP, Duration.ofSeconds(5));
@@ -177,6 +184,7 @@ class KafkaStreamsHealthIndicatorTest {
     @DisplayName("Given faulty record(ILLEGAL), and replace thread handling, when asked for HC, then should return Down")
     void th7() {
         /* Given */
+        final String topic = addRandomTopic(broker);
         healthCheck(true)
                 .withBean(
                         StreamsBuilderFactoryBeanCustomizer.class,
@@ -185,17 +193,18 @@ class KafkaStreamsHealthIndicatorTest {
                 .run(context -> {
                     final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
                     expect(indicator, Status.UP);
+
                     produce(
                             broker,
-                            new ProducerRecord<>("in", 0, "key", "some-value"),
-                            new ProducerRecord<>("in", 1, "key", "some-value"),
-                            new ProducerRecord<>("in", 2, "key", "some-value"),
-                            new ProducerRecord<>("in", 0, ILLEGAL_ARG_EXP_KEY, "exception-value"),
-                            new ProducerRecord<>("in", 1, "key", "other-value"),
-                            new ProducerRecord<>("in", 2, "key", "other-value")
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, ILLEGAL_ARG_EXP_KEY, "exception-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "other-value"),
+                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "other-value")
                     );
                     /* When & Then */
-                    expect(indicator, Status.DOWN, Duration.ofSeconds(5));
+                    expect(indicator, Status.DOWN);
                 });
     }
 
@@ -203,18 +212,19 @@ class KafkaStreamsHealthIndicatorTest {
     @DisplayName("Given faulty record(NPE), no strategy, when asked for HC, then should return Up")
     void th8() {
         /* Given */
+        final String topic = addRandomTopic(broker);
         healthCheck(true)
                 .run(context -> {
                     final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
                     expect(indicator, Status.UP);
                     produce(
                             broker,
-                            new ProducerRecord<>("in", 0, "key", "some-value"),
-                            new ProducerRecord<>("in", 1, "key", "some-value"),
-                            new ProducerRecord<>("in", 2, "key", "some-value"),
-                            new ProducerRecord<>("in", 0, NPE_ARG_EXP_KEY, "exception-value"),
-                            new ProducerRecord<>("in", 1, "key", "other-value"),
-                            new ProducerRecord<>("in", 2, "key", "other-value")
+                            new ProducerRecord<>(topic, 0, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, 1, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, 2, String.valueOf(UUID.randomUUID()), "some-value"),
+                            new ProducerRecord<>(topic, 0, NPE_ARG_EXP_KEY, "exception-value"),
+                            new ProducerRecord<>(topic, 1, String.valueOf(UUID.randomUUID()), "other-value"),
+                            new ProducerRecord<>(topic, 2, String.valueOf(UUID.randomUUID()), "other-value")
                     );
                     /* When & Then */
                     expect(indicator, Status.UP, Duration.ofSeconds(5));
@@ -242,11 +252,12 @@ class KafkaStreamsHealthIndicatorTest {
                         "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
                         "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
                         "spring.kafka.streams.properties.auto.offset.reset=earliest",
-                        "spring.kafka.streams.properties.commit.interval.ms=10",
+                        "spring.kafka.streams.properties.commit.interval.ms=100",
                         "spring.kafka.streams.properties.num.stream.threads=3",
-                        "spring.kafka.streams.properties.session.timeout.ms=600",
-                        "spring.kafka.streams.properties.heartbeat.interval.ms=200",
+                        "spring.kafka.streams.properties.session.timeout.ms=100",
+                        "spring.kafka.streams.properties.heartbeat.interval.ms=50",
                         "spring.kafka.streams.properties.fetch.max.wait.ms=60"
+                        //"spring.kafka.streams.properties.metadata.max.age.ms=10"
                 )
                 .withUserConfiguration(StreamBuilderFactoryConfiguration.class, KStreamApplication.class)
                 .withConfiguration(
@@ -267,13 +278,13 @@ class KafkaStreamsHealthIndicatorTest {
                 return;
             }
 
-            final Pattern pattern = Pattern.compile("in*");
+            final Pattern pattern = Pattern.compile(".*");
             builder.<String, String>stream(pattern, Consumed.as("in-consumer"))
                    .filter((key, value) -> {
-                       if (key.equals(NPE_ARG_EXP_KEY)) {
+                       if (key.equalsIgnoreCase(NPE_ARG_EXP_KEY)) {
                            throw new NullPointerException();
                        }
-                       if (key.equals(ILLEGAL_ARG_EXP_KEY)) {
+                       if (key.equalsIgnoreCase(ILLEGAL_ARG_EXP_KEY)) {
                            throw new IllegalArgumentException();
                        }
                        return true;

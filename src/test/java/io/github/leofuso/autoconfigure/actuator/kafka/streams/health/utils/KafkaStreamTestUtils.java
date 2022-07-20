@@ -4,6 +4,7 @@ import javax.annotation.Nonnull;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -60,14 +61,23 @@ public abstract class KafkaStreamTestUtils {
         }
     }
 
+    public static String addRandomTopic(EmbeddedKafkaBroker embeddedKafka) {
+        final String topicToAdd = "topic-" + UUID.randomUUID();
+        embeddedKafka.addTopics(topicToAdd);
+        return topicToAdd;
+    }
+
     public static void expect(HealthIndicator indicator, Status expected) throws Throwable {
         expect(indicator, expected, Duration.ofMillis(100));
     }
 
     public static void expect(HealthIndicator indicator, Status expected, Duration initDelay) throws Throwable {
 
-        final int tries = 3;
-        final Duration betweenAttempts = Duration.ofSeconds(5);
+        final Duration oneSecond = Duration.ofSeconds(1);
+        final long max = Math.max(oneSecond.toMillis(), initDelay.toMillis());
+
+        final int tries = 2;
+        final Duration betweenAttempts = Duration.ofMillis(max);
 
         final long delay = betweenAttempts.toMillis();
         final long timeout = betweenAttempts.toMillis() * (tries + 1);
