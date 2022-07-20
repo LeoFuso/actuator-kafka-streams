@@ -1,36 +1,7 @@
 Topologies:
-  Sub-topology: 0
-   Source: in-consumer (topics: [in])
-     --> exception-filter
-   Processor: exception-filter (stores: [])
-     --> out-sink
-     <-- in-consumer
-   Sink: out-sink (topic: out)
-     <-- exception-filter
+     Sub-topology: 0
+      Source: in-consumer (topics: .*)
+        --> out-sink
+      Sink: out-sink (topic: out)
+        <-- in-consumer
 
-    Sub-topology: 1
-      Source: sum-consumer (topics: [sum-in])
-        --> sum-to-uuid
-      Processor: sum-to-uuid (stores: [])
-        --> sum-group-by-repartition-filter
-        <-- sum-consumer
-      Processor: sum-group-by-repartition-filter (stores: [])
-        --> sum-group-by-repartition-sink
-        <-- sum-to-uuid
-      Sink: sum-group-by-repartition-sink (topic: sum-group-by-repartition)
-        <-- sum-group-by-repartition-filter
-
-    Sub-topology: 2
-      Source: sum-group-by-repartition-source (topics: [sum-group-by-repartition])
-        --> sum
-      Processor: sum (stores: [sum-store])
-        --> sum-as-stream
-        <-- sum-group-by-repartition-source
-      Processor: sum-as-stream (stores: [])
-        --> sum-to-string
-        <-- sum
-      Processor: sum-to-string (stores: [])
-        --> sum-sink
-        <-- sum-as-stream
-      Sink: sum-sink (topic: sum-out)
-        <-- sum-to-string
