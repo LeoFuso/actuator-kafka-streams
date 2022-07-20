@@ -257,7 +257,6 @@ class KafkaStreamsHealthIndicatorTest {
                         "spring.kafka.streams.properties.session.timeout.ms=100",
                         "spring.kafka.streams.properties.heartbeat.interval.ms=50",
                         "spring.kafka.streams.properties.fetch.max.wait.ms=60"
-                        //"spring.kafka.streams.properties.metadata.max.age.ms=10"
                 )
                 .withUserConfiguration(StreamBuilderFactoryConfiguration.class, KStreamApplication.class)
                 .withConfiguration(
