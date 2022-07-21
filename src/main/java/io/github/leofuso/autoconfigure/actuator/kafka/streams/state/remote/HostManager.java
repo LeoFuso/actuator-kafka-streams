@@ -69,7 +69,7 @@ public interface HostManager {
         @Override
         public void onChange(final State newState, final State oldState) {
             if (newState == State.REBALANCING) {
-                logger.info("Starting HostManager clean-up, gRPC services may be temporally unavailable.");
+                logger.info("Current partitions assignments may be revoked, starting HostManager clean-up.");
                 manager.cleanUp();
             }
         }

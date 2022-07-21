@@ -78,16 +78,9 @@ class TopologyEndpointTest {
     private ApplicationContextRunner topology(Boolean enabled) {
         return new ApplicationContextRunner()
                 .withPropertyValues(
-                        "log4j.category.org.apache.kafka.clients=OFF",
-                        "log4j.category.org.apache.kafka.common.network.Selector=OFF",
-                        "log4j.category.kafka.server.ReplicaFetcherThread=OFF",
                         "logging.level.org.apache.kafka=OFF",
                         "management.endpoints.web.exposure.include=" + (enabled ? "topology" : ""),
                         "spring.kafka.bootstrap-servers=" + broker.getBrokersAsString(),
-                        /*
-                         * This config prevents the Broker to enter a re-balance state between test runs, causing the test thread to hang,
-                         * behaving almost like a fork bomb. Wasted two days of my life trying to solve this issue. Fun.
-                         */
                         "spring.kafka.streams.application-id=application-" + UUID.randomUUID(),
                         "spring.kafka.streams.cleanup.on-startup=true",
                         "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",

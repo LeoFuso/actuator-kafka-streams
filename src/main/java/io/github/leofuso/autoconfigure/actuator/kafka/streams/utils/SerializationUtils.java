@@ -59,7 +59,7 @@ public abstract class SerializationUtils {
     @Nullable
     public static <T> T deserialize(byte[] bytes) {
 
-        if (bytes == null) {
+        if (bytes == null || bytes.length == 0) {
             return null;
         }
 

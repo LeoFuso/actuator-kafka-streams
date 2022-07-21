@@ -11,10 +11,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.actuate.health.Status;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
@@ -25,6 +27,8 @@ import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
+import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG;
 import static org.apache.kafka.clients.producer.ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -61,8 +65,26 @@ public abstract class KafkaStreamTestUtils {
         }
     }
 
+    public static void await(EmbeddedKafkaBroker embeddedKafka, Duration timeout, String... topics) {
+        final UUID group = UUID.randomUUID();
+        Map<String, Object> props = KafkaTestUtils.consumerProps("group-" + group, "false", embeddedKafka);
+
+        props.put(AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+
+        DefaultKafkaConsumerFactory<String, String> cf = new DefaultKafkaConsumerFactory<>(props);
+        try (Consumer<String, String> consumer = cf.createConsumer()) {
+            embeddedKafka.consumeFromEmbeddedTopics(consumer, topics);
+            KafkaTestUtils.getRecords(consumer, timeout.toMillis());
+        }
+    }
+
     public static String addRandomTopic(EmbeddedKafkaBroker embeddedKafka) {
-        final String topicToAdd = "topic-" + UUID.randomUUID();
+        return addRandomTopic(embeddedKafka, "topic");
+    }
+
+    public static String addRandomTopic(EmbeddedKafkaBroker embeddedKafka, String prefix) {
+        final String topicToAdd = prefix + "-" + UUID.randomUUID();
         embeddedKafka.addTopics(topicToAdd);
         return topicToAdd;
     }

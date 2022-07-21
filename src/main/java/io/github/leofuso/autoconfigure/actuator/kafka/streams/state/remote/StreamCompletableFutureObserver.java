@@ -28,7 +28,7 @@ public class StreamCompletableFutureObserver<T> extends CompletableFuture<T> imp
     public void onError(final Throwable throwable) {
         final Throwable underlyingCause = throwable.getCause();
         if (underlyingCause != null) {
-            completeExceptionally(throwable);
+            completeExceptionally(underlyingCause);
         }
         completeExceptionally(throwable);
     }
