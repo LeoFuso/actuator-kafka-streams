@@ -1,6 +1,7 @@
 
 # Actuator endpoints for Kafka Stream
 
+[![](https://maven-badges.herokuapp.com/maven-central/io.github.leofuso/actuator-kafka-stream/badge.svg?style=flat)](https://mvnrepository.com/artifact/io.github.leofuso/actuator-kafka-stream)
 [![](https://jitpack.io/v/LeoFuso/actuator-kafka-streams.svg)](https://jitpack.io/#LeoFuso/actuator-kafka-streams)
 
 This is a simple project built on top of Spring Boot's Actuator and [Spring Boot for Apache Kafka project](https://spring.io/projects/spring-kafka/)
