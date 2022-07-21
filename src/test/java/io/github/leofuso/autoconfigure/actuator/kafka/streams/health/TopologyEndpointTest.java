@@ -2,12 +2,21 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.health;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.Grouped;
+import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.Transformer;
+import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
@@ -26,9 +35,10 @@ import io.github.leofuso.autoconfigure.actuator.kafka.streams.health.setup.Strea
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpoint;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpointAutoConfiguration;
 
+import static org.apache.kafka.common.serialization.Serdes.Integer;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EmbeddedKafka(topics = {"in", "out"})
+@EmbeddedKafka
 @TestMethodOrder(MethodOrderer.MethodName.class)
 class TopologyEndpointTest {
 
@@ -55,21 +65,24 @@ class TopologyEndpointTest {
     }
 
     @Test
-    @DisplayName("Given a simple topology, when asked for it, then return it.")
+    @DisplayName("Given a topology, when asked for it, then return it.")
     void th2() {
         /* Given */
         topology(true).run(context -> {
             final TopologyEndpoint topology = context.getBean(TopologyEndpoint.class);
             /* When & Then */
-            final String actual = topology.topology();
+            final String actual = topology.topology()
+                                          .trim();
 
             File file = ResourceUtils.getFile("classpath:topology.txt");
-
-            /* Files.writeString(file.toPath(), actualTopology, StandardCharsets.UTF_8) */
-
-            final String expectedTopology = Files.readString(file.toPath());
-            assertThat(actual)
-                    .isEqualTo(expectedTopology);
+            final String lineSeparator = System.getProperty("line.separator");
+            final List<String> lines = Files.readAllLines(file.toPath());
+            final String[] actualSplit = actual.split(lineSeparator);
+            for (int i = 0; i < lines.size(); i++) {
+                final String expectedLine = lines.get(i);
+                assertThat(expectedLine)
+                        .contains(actualSplit[i]);
+            }
         });
     }
 
@@ -106,8 +119,42 @@ class TopologyEndpointTest {
                 return;
             }
 
-            final Pattern pattern = Pattern.compile(".*");
-            builder.<String, String>stream(pattern, Consumed.as("in-consumer"))
+            builder.<String, String>stream("out-in", Consumed.as("out-consumer"))
+                   .transform(() -> new Transformer<String, String, KeyValue<UUID, Integer>>() {
+                       @Override
+                       public void init(final ProcessorContext context) {}
+
+                       @Override
+                       public KeyValue<UUID, Integer> transform(final String key, final String value) {
+                           return new KeyValue<>(UUID.fromString(key), Integer.valueOf(value));
+                       }
+
+                       @Override
+                       public void close() {}
+                   }, Named.as("out-to-uuid"))
+                   .groupByKey(Grouped.<UUID, Integer>as("out-group-by")
+                                      .withKeySerde(Serdes.UUID())
+                                      .withValueSerde(Integer()))
+                   .reduce(
+                           Integer::sum,
+                           Named.as("out"),
+                           Materialized.<UUID, Integer, KeyValueStore<Bytes, byte[]>>as("out-store")
+                                       .withKeySerde(Serdes.UUID())
+                                       .withValueSerde(Serdes.Integer())
+                   )
+                   .toStream(Named.as("out-as-stream"))
+                   .transform(() -> new Transformer<UUID, Integer, KeyValue<String, String>>() {
+                       @Override
+                       public void init(final ProcessorContext context) {}
+
+                       @Override
+                       public KeyValue<String, String> transform(final UUID key, final Integer value) {
+                           return new KeyValue<>(key.toString(), value.toString());
+                       }
+
+                       @Override
+                       public void close() {}
+                   }, Named.as("out-to-string"))
                    .to("out", Produced.as("out-sink"));
         }
     }
