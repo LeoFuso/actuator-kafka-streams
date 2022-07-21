@@ -20,7 +20,6 @@ import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.ObjectProvider;
@@ -110,7 +109,6 @@ public class ReadOnlyStateStoreEndpointTest {
     }
 
     @Test
-    @RepeatedTest(2)
     @DisplayName("Given a remote and local state, with default key-serde, when queried, then should return correct value")
     void t4() {
         /* Given */
