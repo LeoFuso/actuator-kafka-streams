@@ -48,7 +48,7 @@ import static org.apache.kafka.streams.StreamsConfig.APPLICATION_SERVER_CONFIG;
 public class InteractiveQueryEndpointAutoConfiguration {
 
     @Bean
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean(GrpcChannelConfigurer.class)
     public GrpcChannelConfigurer plainTextChannelConfigurer() {
         return new PlainTextChannelConfigurer();
     }

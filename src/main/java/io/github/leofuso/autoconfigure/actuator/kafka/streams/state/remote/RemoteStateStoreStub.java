@@ -13,8 +13,16 @@ public interface RemoteStateStoreStub extends RemoteStateStore {
         return false;
     }
 
+    /**
+     * Customizes this {@link RemoteStateStoreStub instance}.
+     * @param configuration available customization to be applied to this {@link RemoteStateStoreStub instance}.
+     */
     void configure(Function<ManagedChannelBuilder<?>, ManagedChannelBuilder<?>> configuration);
 
+    /**
+     * Initializes this {@link RemoteStateStoreStub stub}. Should be invoked before made available to receive
+     * actual requests, and after all configurations were applied.
+     */
     void initialize();
 
 
