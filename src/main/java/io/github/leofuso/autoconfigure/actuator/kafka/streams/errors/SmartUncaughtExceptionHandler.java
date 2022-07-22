@@ -11,6 +11,8 @@ import org.apache.kafka.common.errors.NetworkException;
 import org.apache.kafka.common.errors.RetriableException;
 import org.apache.kafka.common.errors.TimeoutException;
 import org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 
 /**
@@ -18,6 +20,8 @@ import org.springframework.core.Ordered;
  * {@link Exception exception}.
  */
 public class SmartUncaughtExceptionHandler implements StreamsUncaughtExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(SmartUncaughtExceptionHandler.class);
 
     /**
      * Exceptions that may be worth to try to recover from.
@@ -33,12 +37,14 @@ public class SmartUncaughtExceptionHandler implements StreamsUncaughtExceptionHa
      */
     private final Set<Class<? extends Throwable>> obligatoryUnrecoverableInclusion = Set.of(
             IllegalArgumentException.class, // Not by choice. Hard limit of the library.
-            IllegalStateException.class, // Not by choice. Hard limit of the library.
-            NullPointerException.class // Usually caused by a Poison Pill.
+            IllegalStateException.class // Not by choice. Hard limit of the library.
     );
 
     private final Set<UncaughtExceptionDecider> deciders;
 
+    /**
+     * Creates a new instance of {@link SmartUncaughtExceptionHandler}.
+     */
     public SmartUncaughtExceptionHandler() {
         this(Stream.empty());
     }
@@ -61,24 +67,27 @@ public class SmartUncaughtExceptionHandler implements StreamsUncaughtExceptionHa
         final Class<? extends Throwable> exceptionClass = exception.getClass();
         for (Class<? extends Throwable> recoverable : naiveRecoverableInclusion) {
             if (recoverable.isAssignableFrom(exceptionClass)) {
-                // Log
+                logger.error("Applying [replace-thread] strategy from recoverable inclusions.", exception);
                 return StreamThreadExceptionResponse.REPLACE_THREAD;
             }
         }
 
         for (Class<? extends Throwable> nonRecoverable : obligatoryUnrecoverableInclusion) {
             if (nonRecoverable.isAssignableFrom(exceptionClass)) {
-                // Log
+                logger.error("Applying [shutdown-application] strategy from unrecoverable inclusions.", exception);
                 return StreamThreadExceptionResponse.SHUTDOWN_APPLICATION;
             }
         }
 
         for (UncaughtExceptionDecider decider : deciders) {
             if (decider.shouldRecover(exception)) {
-                // Also Log
+                final Class<? extends UncaughtExceptionDecider> deciderClass = decider.getClass();
+                final String deciderName = deciderClass.getSimpleName();
+                logger.error("Applying [replace-thread] strategy from [{}] decider", deciderName, exception);
                 return StreamThreadExceptionResponse.REPLACE_THREAD;
             }
         }
+        logger.error("Exhausted all recover strategies. Applying [shutdown-application] strategy.", exception);
         return StreamThreadExceptionResponse.SHUTDOWN_APPLICATION;
     }
 
