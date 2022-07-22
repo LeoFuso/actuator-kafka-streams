@@ -74,6 +74,7 @@ public class ReadOnlyStateStoreEndpoint {
             final String message = Optional
                     .ofNullable(cause)
                     .map(Throwable::toString)
+                    .map(nested -> ex.getMessage() + "; nested exception is " + nested)
                     .orElseGet(ex::toString);
 
             return Map.of(ERROR_MESSAGE_KEY, message);

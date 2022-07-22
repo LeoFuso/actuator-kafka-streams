@@ -39,9 +39,10 @@ import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpo
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.utils.KafkaStreamTestUtils.await;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.utils.KafkaStreamTestUtils.produce;
 import static org.apache.kafka.common.serialization.Serdes.Integer;
+import static org.apache.kafka.common.serialization.Serdes.Long;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EmbeddedKafka(topics = {"join-in", "sum-in", "sum-out", "join-store-changelog"})
+@EmbeddedKafka(topics = {"join-in", "sum-in", "sum-out", "join-store-changelog", "sum-store-changelog"})
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class ReadOnlyStateStoreEndpointTest {
 
@@ -164,6 +165,69 @@ public class ReadOnlyStateStoreEndpointTest {
                 });
     }
 
+    @Test
+    @DisplayName("Given a local state, with supported key-serde, when queried, then should return correct value")
+    void t5() {
+        /* Given */
+        readonlystatestore(true, 9090)
+                .run(context -> {
+
+                    final String longKey = "25";
+                    final String serdeClass = Serdes.LongSerde.class.getName();
+
+                    produce(
+                            broker,
+                            new ProducerRecord<>("sum-in", longKey, "1"),
+                            new ProducerRecord<>("sum-in", longKey, "2"),
+                            new ProducerRecord<>("sum-in", longKey, "3")
+                    );
+
+                    await(broker, Duration.ofSeconds(2), "sum-store-changelog");
+
+                    /* When */
+                    final ReadOnlyStateStoreEndpoint endpoint = context.getBean(ReadOnlyStateStoreEndpoint.class);
+
+                    final Map<String, String> response = endpoint.find("sum-store", longKey, serdeClass);
+
+                    /* Then */
+                    assertThat(response)
+                            .isNotEmpty()
+                            .containsOnlyKeys(longKey)
+                            .hasEntrySatisfying(longKey, s -> assertThat(s).isEqualTo("6"));
+                });
+    }
+
+    @Test
+    @DisplayName("Given a local state, with unsupported mapping, when queried, then should return conversion error")
+    void t6() {
+        /* Given */
+        readonlystatestore(true, 9090)
+                .run(context -> {
+
+                    final String longKey = "25";
+                    final String serdeClass = Serdes.LongSerde.class.getName();
+
+                    produce(
+                            broker,
+                            new ProducerRecord<>("sum-in", longKey, "1"),
+                            new ProducerRecord<>("sum-in", longKey, "2"),
+                            new ProducerRecord<>("sum-in", longKey, "3")
+                    );
+
+                    await(broker, Duration.ofSeconds(2), "sum-store-changelog");
+
+                    /* When */
+                    final ReadOnlyStateStoreEndpoint endpoint = context.getBean(ReadOnlyStateStoreEndpoint.class);
+
+                    final Map<String, String> response = endpoint.find("sum-store", longKey + "L", serdeClass);
+
+                    /* Then */
+                    assertThat(response)
+                            .isNotEmpty()
+                            .hasEntrySatisfying("message", s -> assertThat(s).contains("NumberFormatException"));
+                });
+    }
+
     private ApplicationContextRunner readonlystatestore(Boolean enabled, int port, Properties additionalSerdes) {
 
         final String[] additionalProps = additionalSerdes.stringPropertyNames()
@@ -239,35 +303,35 @@ public class ReadOnlyStateStoreEndpointTest {
                    );
 
             builder.<String, String>stream("sum-in", Consumed.as("sum-consumer"))
-                   .transform(() -> new Transformer<String, String, KeyValue<UUID, Integer>>() {
+                   .transform(() -> new Transformer<String, String, KeyValue<Long, Integer>>() {
                        @Override
                        public void init(final ProcessorContext context) {}
 
                        @Override
-                       public KeyValue<UUID, Integer> transform(final String key, final String value) {
-                           return new KeyValue<>(UUID.fromString(key), Integer.valueOf(value));
+                       public KeyValue<Long, Integer> transform(final String key, final String value) {
+                           return new KeyValue<>(Long.valueOf(key), Integer.valueOf(value));
                        }
 
                        @Override
                        public void close() {}
                    }, Named.as("sum-to-uuid"))
-                   .groupByKey(Grouped.<UUID, Integer>as("sum-group-by")
-                                      .withKeySerde(Serdes.UUID())
+                   .groupByKey(Grouped.<Long, Integer>as("sum-group-by")
+                                      .withKeySerde(Long())
                                       .withValueSerde(Integer()))
                    .reduce(
                            Integer::sum,
                            Named.as("sum"),
-                           Materialized.<UUID, Integer, KeyValueStore<Bytes, byte[]>>as("sum-store")
-                                       .withKeySerde(Serdes.UUID())
-                                       .withValueSerde(Serdes.Integer())
+                           Materialized.<Long, Integer, KeyValueStore<Bytes, byte[]>>as("sum-store")
+                                       .withKeySerde(Long())
+                                       .withValueSerde(Integer())
                    )
                    .toStream(Named.as("sum-as-stream"))
-                   .transform(() -> new Transformer<UUID, Integer, KeyValue<String, String>>() {
+                   .transform(() -> new Transformer<Long, Integer, KeyValue<String, String>>() {
                        @Override
                        public void init(final ProcessorContext context) {}
 
                        @Override
-                       public KeyValue<String, String> transform(final UUID key, final Integer value) {
+                       public KeyValue<String, String> transform(final Long key, final Integer value) {
                            return new KeyValue<>(key.toString(), value.toString());
                        }
 
