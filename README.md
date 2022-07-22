@@ -4,7 +4,7 @@
 [![](https://maven-badges.herokuapp.com/maven-central/io.github.leofuso/actuator-kafka-stream/badge.svg?style=flat)](https://mvnrepository.com/artifact/io.github.leofuso/actuator-kafka-stream)
 [![](https://jitpack.io/v/LeoFuso/actuator-kafka-streams.svg)](https://jitpack.io/#LeoFuso/actuator-kafka-streams)
 
-This is a simple project built on top of Spring Boot's Actuator and [Spring Boot for Apache Kafka project](https://spring.io/projects/spring-kafka/)
+This is a not-so-simple project built on top of Spring Boot's Actuator and [Spring Boot for Apache Kafka project](https://spring.io/projects/spring-kafka/)
 that aims to provide some functionally on top of Actuator's endpoints.
 
 It was inspired by existent functionalities present in the [Spring Cloud Stream](https://spring.io/projects/spring-cloud-stream) project.
@@ -96,7 +96,7 @@ Further, you also need to add `statestorerestore` endpoint to `management.endpoi
 You can query for specific (key/value) and (key/timestamped value) pairs of a store. This action is performed both 
 locally and remotely, with gRPC support. For this reason, if you're running a cluster of Stream Applications, your App
 must be available to be queried by other Apps on the network, as the state of your Stream App is distributed across
-multiple instances. you'll also need to provide the needed server configuration for Kafka Streams API.
+multiple instances. You'll also need to provide the needed server configuration for Kafka Streams API.
 
 ```properties
 spring.kafka.streams.properties.application.server=localhost:9090
