@@ -52,7 +52,7 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
         final KafkaStreams kafkaStreams = streamsBuilderFactoryBean.getKafkaStreams();
         if (kafkaStreams == null) {
             builder.withDetail(KEY, "StreamBuilderFactoryBean probably hasn't fully started yet.")
-                   .unknown();
+                   .down();
             return;
         }
 
@@ -63,7 +63,7 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
 
         if (applicationId.isEmpty()) {
             builder.withDetail(KEY, "Application.id wasn't supplied.")
-                   .unknown();
+                   .down();
             return;
         }
 
@@ -73,11 +73,17 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
         threadDetails(kafkaStreams, details);
 
         final KafkaStreams.State streamState = kafkaStreams.state();
-        boolean isRunning = streamState.isRunningOrRebalancing();
+        boolean isRunning = kafkaStreams
+                .metadataForLocalThreads()
+                .stream()
+                .map(ThreadMetadata::threadState)
+                .map(KafkaStreams.State::valueOf)
+                .map(state -> !state.hasStartedOrFinishedShuttingDown())
+                .reduce(streamState.isRunningOrRebalancing(), Boolean::logicalAnd);
 
         if (!isRunning) {
             final String diagnosticMessage = String.format(
-                    "[ %s ] is down: Stream state [ %s ]",
+                    "[ %s ] is down: Global stream state [ %s ]",
                     applicationId,
                     streamState
             );

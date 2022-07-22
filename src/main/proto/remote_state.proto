@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc";
+
+package remote_state_store;
+
+message Value {
+  bytes content = 1;
+}
+
+service StateStore {
+  rpc invoke(Invocation) returns (stream Value) {}
+}
+
+message Invocation {
+  string storeReference = 1;
+  map<int32, bytes> arguments = 2;
+}
+

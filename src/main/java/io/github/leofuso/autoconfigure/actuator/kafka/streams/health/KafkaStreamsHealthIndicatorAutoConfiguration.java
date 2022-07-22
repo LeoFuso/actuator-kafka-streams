@@ -2,6 +2,7 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.health;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.health.ConditionalOnEnabledHealthIndicator;
+import org.springframework.boot.actuate.autoconfigure.health.HealthEndpointAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -14,7 +15,7 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsHealthIndicatorAutoConfiguration.INDICATOR;
 import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_BUILDER_BEAN_NAME;
 
-@AutoConfiguration(after = {KafkaStreamsDefaultConfiguration.class})
+@AutoConfiguration(after = {KafkaStreamsDefaultConfiguration.class}, before = {HealthEndpointAutoConfiguration.class})
 @ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class})
 @ConditionalOnBean(value = {StreamsBuilderFactoryBean.class})
 @ConditionalOnEnabledHealthIndicator(INDICATOR)

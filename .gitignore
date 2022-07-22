@@ -14,6 +14,8 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
+local-state-store/
+
 ### Eclipse ###
 .apt_generated
 .classpath

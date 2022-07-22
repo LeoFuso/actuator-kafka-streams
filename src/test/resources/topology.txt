@@ -1,0 +1,27 @@
+Topologies:
+   Sub-topology: 0
+    Source: out-consumer (topics: [out-in])
+      --> out-to-uuid
+    Processor: out-to-uuid (stores: [])
+      --> out-group-by-repartition-filter
+      <-- out-consumer
+    Processor: out-group-by-repartition-filter (stores: [])
+      --> out-group-by-repartition-sink
+      <-- out-to-uuid
+    Sink: out-group-by-repartition-sink (topic: out-group-by-repartition)
+      <-- out-group-by-repartition-filter
+
+  Sub-topology: 1
+    Source: out-group-by-repartition-source (topics: [out-group-by-repartition])
+      --> out
+    Processor: out (stores: [out-store])
+      --> out-as-stream
+      <-- out-group-by-repartition-source
+    Processor: out-as-stream (stores: [])
+      --> out-to-string
+      <-- out
+    Processor: out-to-string (stores: [])
+      --> out-sink
+      <-- out-as-stream
+    Sink: out-sink (topic: out)
+      <-- out-to-string

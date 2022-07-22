@@ -1,6 +1,8 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore;
 
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.streams.processor.StateRestoreListener;
@@ -12,8 +14,8 @@ public class DefaultCompositeStateRestoreListener implements CompositeStateResto
 
     private final Set<StateRestoreListener> listeners;
 
-    public DefaultCompositeStateRestoreListener(final Set<StateRestoreListener> listeners) {
-        this.listeners = listeners;
+    public DefaultCompositeStateRestoreListener(final Stream<StateRestoreListener> listeners) {
+        this.listeners = listeners.collect(Collectors.toSet());
     }
 
     @Override

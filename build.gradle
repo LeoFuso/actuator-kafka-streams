@@ -6,32 +6,15 @@ plugins {
     id 'signing'
     id 'maven-publish'
     id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
+    id 'com.google.protobuf' version '0.8.19'
 }
 
 group 'io.github.leofuso'
-version 'v2.7.0.1.RELEASE'
+version 'v2.7.0.2.RELEASE'
 
 
 repositories {
     mavenCentral()
-}
-
-dependencies {
-
-    /* Spring */
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.kafka:spring-kafka'
-    implementation 'org.apache.kafka:kafka-streams'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
-
-    /* Annotation Processors */
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-    annotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'
-
-    /* Test */
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.kafka:spring-kafka-test'
-
 }
 
 configurations {
@@ -54,6 +37,16 @@ compileJava {
 java {
     withJavadocJar()
     withSourcesJar()
+    registerFeature('principal') {
+        usingSourceSet(sourceSets.main)
+        withJavadocJar()
+        withSourcesJar()
+    }
+    registerFeature('grpcSupport') {
+        usingSourceSet(sourceSets.main)
+        withJavadocJar()
+        withSourcesJar()
+    }
 }
 
 javadoc {
@@ -62,8 +55,50 @@ javadoc {
     }
 }
 
+dependencies {
+
+    /* Spring */
+    principalImplementation 'org.springframework.boot:spring-boot-starter-actuator'
+    principalImplementation 'org.springframework.kafka:spring-kafka'
+    principalImplementation 'org.apache.kafka:kafka-streams'
+    principalImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    principalImplementation 'com.google.code.findbugs:jsr305:3.0.2'
+
+    grpcSupportImplementation 'io.grpc:grpc-protobuf:1.47.0'
+    grpcSupportImplementation 'io.grpc:grpc-stub:1.47.0'
+    grpcSupportApiElements 'org.apache.tomcat:annotations-api:6.0.53'
+    grpcSupportRuntimeElements 'io.grpc:grpc-netty-shaded:1.47.0'
+
+    /* Annotation Processors */
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'
+
+    /* Test */
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'io.grpc:grpc-netty-shaded:1.47.0'
+
+}
+
 test {
     useJUnitPlatform()
+}
+
+/* gRPC Support requires code to be generated based on .proto files, these must be packed together with the lib */
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.19.2"
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.47.0'
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
 }
 
 publishing {
