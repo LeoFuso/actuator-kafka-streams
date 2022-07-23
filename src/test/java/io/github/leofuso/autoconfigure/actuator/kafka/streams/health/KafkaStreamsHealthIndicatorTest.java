@@ -209,7 +209,7 @@ class KafkaStreamsHealthIndicatorTest {
     }
 
     @Test
-    @DisplayName("Given faulty record(NPE), no strategy, when asked for HC, then should return Up")
+    @DisplayName("Given faulty record(NPE), no strategy, when asked for HC, then should return Down")
     void th8() {
         /* Given */
         final String topic = addRandomTopic(broker);
@@ -227,7 +227,7 @@ class KafkaStreamsHealthIndicatorTest {
                             new ProducerRecord<>(topic, 2, String.valueOf(UUID.randomUUID()), "other-value")
                     );
                     /* When & Then */
-                    expect(indicator, Status.UP, Duration.ofSeconds(5));
+                    expect(indicator, Status.DOWN, Duration.ofSeconds(5));
                 });
     }
 
@@ -237,8 +237,8 @@ class KafkaStreamsHealthIndicatorTest {
         return new ApplicationContextRunner()
                 .withPropertyValues(
                         "logging.level.org.apache.kafka=OFF",
-                        "management.endpoint.health.group.liveness.include=kStreams",
-                        "management.health.kStreams.enabled=" + enabled.toString(),
+                        "management.endpoint.health.group.liveness.include=kstreams",
+                        "management.health.kstreams.enabled=" + enabled.toString(),
                         "spring.kafka.bootstrap-servers=" + broker.getBrokersAsString(),
                         "spring.kafka.streams.application-id=application-" + UUID.randomUUID(),
                         "spring.kafka.streams.cleanup.on-startup=true",
