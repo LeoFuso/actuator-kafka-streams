@@ -56,11 +56,24 @@ steps, since it comes with these dependencies by default.
 ## Health check
 
 This package assumes a `StreamsBuilderFactoryBean` bean available on the classpath. Simply import it, and you can assign it to a health
-group as `kStreams`, just like any other health-check dependency.
+group as `kstreams`, just like any other health-check dependency.
 
 ```txt
-management.endpoint.health.group.readiness.include=ping, kStreams
+management.endpoint.health.group.readiness.include=ping, kstreams
 ```
+
+A StreamThread can fail by any number of reasons, some of them are out of our control, like Network related problems. 
+Keeping that in mind, by default, the health-check allows for downed StreamThreads count to be up a maximum of `num.stream.threads` - 1, 
+and can be configured further using the following properties.
+
+```txt
+management.health.kstreams.allow-thread-loss=true
+management.health.kstreams.minimum-number-of-live-stream-threads=1
+```
+
+If the desired behavior is not to allow for threads to die, one can choose to disabled it. That way, if
+any StreamThreads happens to stop working, the health-check should take it into account. Alternatively, you can pick
+a desired number of minimum live StreamThreads to work with.
 
 ## Endpoints
 

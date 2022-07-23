@@ -29,12 +29,43 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
     private final StreamsBuilderFactoryBean streamsBuilderFactoryBean;
 
     /**
+     * Either or not to use the <code>num.stream.threads</code> config as a threshold as the required minimum number of
+     * live {@link org.apache.kafka.streams.processor.internals.StreamThread stream threads}.
+     */
+    private final boolean useNumStreamThreadsAsMinimum;
+
+    /**
+     * A minimum number of live {@link org.apache.kafka.streams.processor.internals.StreamThread stream threads}
+     * required to indicate a {@link Status#UP healthy} status.
+     */
+    private final int minNumOfLiveStreamThreads;
+
+    /**
      * Create a new {@link KafkaStreamsHealthIndicator} instance.
      *
      * @param streamsBuilderFactoryBean used to access the underlying {@link KafkaStreams} instance.
      */
     public KafkaStreamsHealthIndicator(StreamsBuilderFactoryBean streamsBuilderFactoryBean) {
         this.streamsBuilderFactoryBean = streamsBuilderFactoryBean;
+        this.useNumStreamThreadsAsMinimum = false;
+        this.minNumOfLiveStreamThreads = 1;
+    }
+
+    /**
+     * Create a new {@link KafkaStreamsHealthIndicator} instance.
+     *
+     * @param streamsBuilderFactoryBean used to access the underlying {@link KafkaStreams} instance.
+     * @param shouldUseNumStreamThreads either or not to use the <code>num.stream.threads</code> as a threshold.
+     * @param minNumOfLiveStreamThreads a minimum number of live
+     *                                  {@link org.apache.kafka.streams.processor.internals.StreamThread stream
+     *                                  threads}.
+     */
+    public KafkaStreamsHealthIndicator(StreamsBuilderFactoryBean streamsBuilderFactoryBean,
+                                       boolean shouldUseNumStreamThreads,
+                                       int minNumOfLiveStreamThreads) {
+        this.streamsBuilderFactoryBean = streamsBuilderFactoryBean;
+        this.useNumStreamThreadsAsMinimum = shouldUseNumStreamThreads;
+        this.minNumOfLiveStreamThreads = minNumOfLiveStreamThreads;
     }
 
     @Override
@@ -79,19 +110,35 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
                 .map(ThreadMetadata::threadState)
                 .map(KafkaStreams.State::valueOf)
                 .map(state -> !state.hasStartedOrFinishedShuttingDown())
-                .reduce(streamState.isRunningOrRebalancing(), Boolean::logicalAnd);
+                .reduce(streamState.isRunningOrRebalancing(), Boolean::logicalOr);
+
+        final Integer streamThreadConfigNumber =
+                Optional.of(configurationProperties)
+                        .map(config -> (String) config.get(StreamsConfig.NUM_STREAM_THREADS_CONFIG))
+                        .map(Integer::parseInt)
+                        .orElse(0);
+
+        final boolean hasMinimumThreadCount = hasMinimumThreadCount(kafkaStreams, streamThreadConfigNumber);
+        if (!hasMinimumThreadCount) {
+            final String diagnosticMessage = String.format(
+                    "[ %s ] did not reach the required minimum number of live threads: [ %d ]",
+                    applicationId.get(),
+                    useNumStreamThreadsAsMinimum ? streamThreadConfigNumber : minNumOfLiveStreamThreads
+            );
+            details.put("minNumberOfLiveThreads", diagnosticMessage);
+        }
 
         if (!isRunning) {
             final String diagnosticMessage = String.format(
                     "[ %s ] is down: Global stream state [ %s ]",
-                    applicationId,
+                    applicationId.get(),
                     streamState
             );
             details.put(KEY, diagnosticMessage);
         }
 
         builder.withDetails(details);
-        builder.status(isRunning ? Status.UP : Status.DOWN);
+        builder.status(isRunning && hasMinimumThreadCount ? Status.UP : Status.DOWN);
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -136,5 +183,20 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
                        .stream()
                        .map(TopicPartition::toString)
                        .collect(Collectors.toList());
+    }
+
+    private boolean hasMinimumThreadCount(KafkaStreams kafkaStreams, int threadConfig) {
+        final long liveThreads = kafkaStreams
+                .metadataForLocalThreads()
+                .stream()
+                .map(ThreadMetadata::threadState)
+                .map(KafkaStreams.State::valueOf)
+                .map(KafkaStreams.State::isRunningOrRebalancing)
+                .count();
+
+        if (useNumStreamThreadsAsMinimum) {
+            return liveThreads >= threadConfig;
+        }
+        return liveThreads >= minNumOfLiveStreamThreads;
     }
 }

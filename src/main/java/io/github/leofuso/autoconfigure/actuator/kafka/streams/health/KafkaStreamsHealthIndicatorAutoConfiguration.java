@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
@@ -19,17 +20,28 @@ import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfigurat
 @ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class})
 @ConditionalOnBean(value = {StreamsBuilderFactoryBean.class})
 @ConditionalOnEnabledHealthIndicator(INDICATOR)
+@EnableConfigurationProperties(KafkaStreamHealthIndicatorProperties.class)
 public class KafkaStreamsHealthIndicatorAutoConfiguration {
 
-    public static final String INDICATOR = "kStreams";
+    public static final String INDICATOR = "kstreams";
+
+    private final KafkaStreamHealthIndicatorProperties properties;
+
+    public KafkaStreamsHealthIndicatorAutoConfiguration(final KafkaStreamHealthIndicatorProperties properties) {
+        this.properties = properties;
+    }
 
     @Bean
     @DependsOn({DEFAULT_STREAMS_BUILDER_BEAN_NAME})
-    @ConditionalOnMissingBean(name = "kStreamsHealthIndicator")
-    public KafkaStreamsHealthIndicator kStreamsHealthIndicator(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider) {
+    @ConditionalOnMissingBean(name = "kstreamsHealthIndicator")
+    public KafkaStreamsHealthIndicator kstreamsHealthIndicator(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider) {
         final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
         if (factory != null) {
-            return new KafkaStreamsHealthIndicator(factory);
+            return new KafkaStreamsHealthIndicator(
+                    factory,
+                    !properties.isAllowThreadLoss(),
+                    properties.getMinimumNumberOfLiveStreamThreads()
+            );
         }
         return null;
     }
