@@ -122,7 +122,7 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
         if (!hasMinimumThreadCount) {
             final String diagnosticMessage = String.format(
                     "[ %s ] did not reach the required minimum number of live threads: [ %d ]",
-                    applicationId,
+                    applicationId.get(),
                     useNumStreamThreadsAsMinimum ? streamThreadConfigNumber : minNumOfLiveStreamThreads
             );
             details.put("minNumberOfLiveThreads", diagnosticMessage);
@@ -131,7 +131,7 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
         if (!isRunning) {
             final String diagnosticMessage = String.format(
                     "[ %s ] is down: Global stream state [ %s ]",
-                    applicationId,
+                    applicationId.get(),
                     streamState
             );
             details.put(KEY, diagnosticMessage);
