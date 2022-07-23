@@ -95,7 +95,7 @@ public class SmartUncaughtExceptionHandler implements StreamsUncaughtExceptionHa
      * Since most exceptions are simply {@link org.apache.kafka.streams.errors.StreamsException stream exceptions}, may
      * be wise to try to identify known errors by message patterns and handle them accordingly.
      */
-    interface UncaughtExceptionDecider extends Ordered {
+    public interface UncaughtExceptionDecider extends Ordered {
 
         /**
          * Inspect the exception received in a
