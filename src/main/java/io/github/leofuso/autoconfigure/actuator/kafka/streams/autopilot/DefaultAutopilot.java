@@ -71,6 +71,47 @@ public class DefaultAutopilot implements Autopilot {
     }
 
     @Override
+    public boolean shouldBoost(final Map<String, Map<TopicPartition, Long>> lag) {
+        final int threadCount = lag.size();
+        if(threadCount == 0) {
+            return false;
+        }
+
+        final Float perThreadLag = lag
+                .values()
+                .stream()
+                .flatMap(thread -> {
+                    final Collection<Long> threadLag = thread.values();
+                    return threadLag.stream();
+                })
+                .reduce(Long::sum)
+                .map(accumulatedLag -> accumulatedLag / (float) threadCount)
+                .orElse(0.0f);
+
+        final long threshold = properties.getLagThreshold();
+        if (perThreadLag <= threshold) {
+            return false;
+        }
+
+        final Integer threadLimit = properties.getStreamThreadLimit();
+        if (threadCount >= threadLimit) {
+            logger.warn(
+                    "StreamThread count [{}] is above limit [{}]. Autopilot should not apply a Boost.",
+                    threadCount,
+                    threadLimit
+            );
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean shouldNerf(final Map<String, Map<TopicPartition, Long>> lag) {
+        final int threadCount = lag.size();
+        return threadCount > desiredThreadCount;
+    }
+
+    @Override
     public void addStreamThread() {
         doAddStreamThread(factory.getKafkaStreams());
     }
@@ -167,40 +208,19 @@ public class DefaultAutopilot implements Autopilot {
 
     @Override
     public void run() {
-        final Map<String, Map<TopicPartition, Long>> recordedLag = lag();
-        final int threadCount = recordedLag.size();
+        final Map<String, Map<TopicPartition, Long>> lag = lag();
+        final int threadCount = lag.size();
         if (threadCount == 0) {
-            logger.warn("Skipping loop. Could not access the recorded lag.");
+            logger.warn("Skipping loop. Could not access any StreamThread lag.");
             return;
         }
 
-        final Float lag = recordedLag
-                .values()
-                .stream()
-                .flatMap(thread -> {
-                    final Collection<Long> threadLag = thread.values();
-                    return threadLag.stream();
-                })
-                .reduce(Long::sum)
-                .map(accumulatedLag -> accumulatedLag / (float) threadCount)
-                .orElse(0.0f);
-
-        final long threshold = properties.getLagThreshold();
-        if (lag > threshold) {
-            final Integer threadLimit = properties.getStreamThreadLimit();
-            if (threadCount >= threadLimit) {
-                logger.warn(
-                        "StreamThread count [{}] is above limit [{}]. Autopilot will not create new StreamThreads.",
-                        threadCount,
-                        threadLimit
-                );
-            } else {
-                addStreamThread();
-            }
+        if (shouldBoost(lag)) {
+            addStreamThread();
             return;
         }
 
-        if (threadCount > desiredThreadCount) {
+        if (shouldNerf(lag)) {
             removeStreamThread();
         }
     }

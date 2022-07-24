@@ -112,7 +112,7 @@ public abstract class KafkaStreamTestUtils {
             if (actual != expected) {
                 return;
             }
-            assertThat(actual).isSameAs(expected);
+            assertThat(actual).isEqualTo(expected);
             /* We need to end the execution */
             @SuppressWarnings({"UnstableApiUsage", "unused"})
             final boolean termination = MoreExecutors.shutdownAndAwaitTermination(executor, 0, TimeUnit.MILLISECONDS);

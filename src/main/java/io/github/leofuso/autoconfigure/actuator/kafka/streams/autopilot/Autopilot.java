@@ -12,6 +12,18 @@ import org.apache.kafka.common.TopicPartition;
 public interface Autopilot extends Runnable {
 
     /**
+     * @param lag the recorded lag.
+     * @return either or not the {@link Autopilot} should {@link Autopilot#addStreamThread()}.
+     */
+    boolean shouldBoost(Map<String, Map<TopicPartition, Long>> lag);
+
+    /**
+     * @param lag the recorded lag.
+     * @return either or not the {@link Autopilot} should {@link Autopilot#removeStreamThread()}.
+     */
+    boolean shouldNerf(Map<String, Map<TopicPartition, Long>> lag);
+
+    /**
      * Invoke the creation of an additional
      * {@link org.apache.kafka.streams.processor.internals.StreamThread StreamThread}.
      */

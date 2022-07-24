@@ -7,6 +7,7 @@ import java.util.Objects;
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.boot.actuate.health.AbstractHealthIndicator;
 import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.Status;
 
 /**
  * Health indicator for {@link Autopilot}.
@@ -14,6 +15,22 @@ import org.springframework.boot.actuate.health.Health;
 public class AutopilotHealthIndicator extends AbstractHealthIndicator {
 
     private static final String KEY = "Autopilot";
+
+    /**
+     * {@link Status} indicating that the Autopilot is probably applying a Boost.
+     */
+    public static final Status BOOST = new Status(
+            "BOOST",
+            "Status indicating that the Autopilot is probably applying a Boost"
+    );
+
+    /**
+     * {@link Status} indicating that the Autopilot is probably applying a Nerf.
+     */
+    public static final Status NERF = new Status(
+            "NERD",
+            "Status indicating that the Autopilot is probably applying a Nerf"
+    );
 
     private final Autopilot autopilot;
 
@@ -43,6 +60,15 @@ public class AutopilotHealthIndicator extends AbstractHealthIndicator {
             });
 
             builder.withDetail(KEY, details);
+            if (autopilot.shouldBoost(record)) {
+                builder.status(BOOST);
+                return;
+            }
+
+            if (autopilot.shouldNerf(record)) {
+                builder.status(NERF);
+                return;
+            }
             builder.up();
 
         } catch (Exception e) {
