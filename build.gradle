@@ -59,6 +59,7 @@ dependencies {
 
     /* Spring */
     principalImplementation 'org.springframework.boot:spring-boot-starter-actuator'
+    principalImplementation 'org.springframework.boot:spring-boot-starter-validation'
     principalImplementation 'org.springframework.kafka:spring-kafka'
     principalImplementation 'org.apache.kafka:kafka-streams'
     principalImplementation 'com.fasterxml.jackson.core:jackson-databind'

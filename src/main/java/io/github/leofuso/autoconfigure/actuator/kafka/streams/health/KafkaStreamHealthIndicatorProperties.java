@@ -6,14 +6,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class KafkaStreamHealthIndicatorProperties {
 
     /**
-     * A required minimum number of running {@link org.apache.kafka.streams.processor.internals.StreamThread stream threads}.
-     * Ignored if {@link KafkaStreamHealthIndicatorProperties#allowThreadLoss thread loss allowance} is false.
+     * A required minimum number of running StreamThreads. Ignored if allowThreadLoss is false.
      */
     private int minimumNumberOfLiveStreamThreads = 1;
 
     /**
-     * Either or not to allow for any of the initially requested
-     * {@link org.apache.kafka.streams.processor.internals.StreamThread stream threads} to shutdown with errors.
+     * Allows any of the initially requested StreamThreads to shutdown with errors.
      */
     private boolean allowThreadLoss = true;
 
