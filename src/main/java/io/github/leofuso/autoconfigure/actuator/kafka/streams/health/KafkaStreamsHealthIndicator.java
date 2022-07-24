@@ -25,7 +25,7 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
  */
 public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
 
-    private static final String KEY = "KafkaStream";
+    private static final String KEY = "KafkaStreams";
 
     private final StreamsBuilderFactoryBean streamsBuilderFactoryBean;
 
