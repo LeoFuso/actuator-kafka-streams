@@ -1,6 +1,7 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.actuate.autoconfigure.endpoint.condition.ConditionalOnAvailableEndpoint;
 import org.springframework.boot.actuate.autoconfigure.health.ConditionalOnEnabledHealthIndicator;
 import org.springframework.boot.actuate.autoconfigure.health.HealthEndpointAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -38,6 +39,17 @@ public class AutopilotAutoConfiguration {
         final StreamsBuilderFactoryBean factory = provider.getIfAvailable();
         if (factory != null) {
             return new DefaultAutopilot(factory, properties);
+        }
+        return null;
+    }
+
+    @Bean
+    @DependsOn({DEFAULT_STREAMS_BUILDER_BEAN_NAME})
+    @ConditionalOnAvailableEndpoint
+    public AutopilotEndpoint autopilotEndpoint(ObjectProvider<Autopilot> provider) {
+        final Autopilot autopilot = provider.getIfAvailable();
+        if (autopilot != null) {
+            return new AutopilotEndpoint(autopilot);
         }
         return null;
     }
