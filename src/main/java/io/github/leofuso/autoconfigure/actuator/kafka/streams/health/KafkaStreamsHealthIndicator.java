@@ -14,6 +14,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.TaskMetadata;
 import org.apache.kafka.streams.ThreadMetadata;
+import org.apache.kafka.streams.processor.internals.StreamThread;
 import org.springframework.boot.actuate.health.AbstractHealthIndicator;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
@@ -103,38 +104,25 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
         details.put("applicationId", applicationId.get());
         threadDetails(kafkaStreams, details);
 
-        final KafkaStreams.State streamState = kafkaStreams.state();
-        boolean isRunning = kafkaStreams
-                .metadataForLocalThreads()
-                .stream()
-                .map(ThreadMetadata::threadState)
-                .map(KafkaStreams.State::valueOf)
-                .map(state -> !state.hasStartedOrFinishedShuttingDown())
-                .reduce(streamState.isRunningOrRebalancing(), Boolean::logicalOr);
-
-        final Integer streamThreadConfigNumber =
-                Optional.of(configurationProperties)
-                        .map(config -> (String) config.get(StreamsConfig.NUM_STREAM_THREADS_CONFIG))
-                        .map(Integer::parseInt)
-                        .orElse(0);
-
-        final boolean hasMinimumThreadCount = hasMinimumThreadCount(kafkaStreams, streamThreadConfigNumber);
-        if (!hasMinimumThreadCount) {
-            final String diagnosticMessage = String.format(
-                    "[ %s ] did not reach the required minimum number of live threads: [ %d ]",
-                    applicationId.get(),
-                    useNumStreamThreadsAsMinimum ? streamThreadConfigNumber : minNumOfLiveStreamThreads
-            );
-            details.put("minNumberOfLiveThreads", diagnosticMessage);
-        }
-
+        final KafkaStreams.State state = kafkaStreams.state();
+        boolean isRunning = state.isRunningOrRebalancing();
         if (!isRunning) {
             final String diagnosticMessage = String.format(
-                    "[ %s ] is down: Global stream state [ %s ]",
+                    "[ %s ] is down: KafkaStreams state [ %s ]",
                     applicationId.get(),
-                    streamState
+                    state
             );
             details.put(KEY, diagnosticMessage);
+        }
+
+        final boolean hasMinimumThreadCount = hasMinimumThreadCount(kafkaStreams);
+        if (!hasMinimumThreadCount) {
+            final String diagnosticMessage = String.format(
+                    "[ %s ] did not reach the required minimum number of live threads: [ %s ]",
+                    applicationId.get(),
+                    useNumStreamThreadsAsMinimum ? "num.stream.threads" : minNumOfLiveStreamThreads
+            );
+            details.put("minNumberOfLiveThreads", diagnosticMessage);
         }
 
         builder.withDetails(details);
@@ -185,18 +173,25 @@ public class KafkaStreamsHealthIndicator extends AbstractHealthIndicator {
                        .collect(Collectors.toList());
     }
 
-    private boolean hasMinimumThreadCount(KafkaStreams kafkaStreams, int threadConfig) {
+    private boolean hasMinimumThreadCount(KafkaStreams kafkaStreams) {
+
         final long liveThreads = kafkaStreams
                 .metadataForLocalThreads()
                 .stream()
                 .map(ThreadMetadata::threadState)
-                .map(KafkaStreams.State::valueOf)
-                .map(KafkaStreams.State::isRunningOrRebalancing)
+                .map(StreamThread.State::valueOf)
+                .map(StreamThread.State::isAlive)
                 .count();
 
         if (useNumStreamThreadsAsMinimum) {
-            return liveThreads >= threadConfig;
+            final Properties properties = streamsBuilderFactoryBean.getStreamsConfiguration();
+            return Optional.ofNullable(properties)
+                            .map(config -> (String) config.get(StreamsConfig.NUM_STREAM_THREADS_CONFIG))
+                            .map(Integer::parseInt)
+                            .map(numThreads -> liveThreads >= numThreads)
+                            .orElse(liveThreads != 0);
         }
+
         return liveThreads >= minNumOfLiveStreamThreads;
     }
 }
