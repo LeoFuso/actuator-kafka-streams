@@ -1,12 +1,14 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
 import org.springframework.boot.actuate.endpoint.annotation.DeleteOperation;
+import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
 
 /**
  * Actuator endpoint for {@link Autopilot} manual operation.
  */
-public class AutopilotEndpoint {
+@Endpoint(id = "autopilotthread")
+public class AutopilotThreadEndpoint {
 
     /**
      * To delegate the actions to.
@@ -14,11 +16,11 @@ public class AutopilotEndpoint {
     private final Autopilot autopilot;
 
     /**
-     * Creates a new {@link AutopilotEndpoint} instance.
+     * Creates a new {@link AutopilotThreadEndpoint} instance.
      *
      * @param autopilot to delegate the actions to.
      */
-    public AutopilotEndpoint(final Autopilot autopilot) {
+    public AutopilotThreadEndpoint(final Autopilot autopilot) {
         this.autopilot = autopilot;
     }
 

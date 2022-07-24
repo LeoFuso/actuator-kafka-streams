@@ -5,7 +5,7 @@
 [![](https://jitpack.io/v/LeoFuso/actuator-kafka-streams.svg)](https://jitpack.io/#LeoFuso/actuator-kafka-streams)
 
 This is a not-so-simple project built on top of Spring Boot's Actuator and [Spring Boot for Apache Kafka project](https://spring.io/projects/spring-kafka/)
-that aims to provide some functionally on top of Actuator's endpoints.
+that aims to provide additional functionalities on top of Actuator's endpoints and some more.
 
 It was inspired by existent functionalities present in the [Spring Cloud Stream](https://spring.io/projects/spring-cloud-stream) project.
 
@@ -17,13 +17,13 @@ Maven
 <dependency>
   <groupId>io.github.leofuso</groupId>
   <artifactId>actuator-kafka-streams</artifactId>
-  <version>v2.7.0.3.RELEASE</version>
+  <version>v2.7.0.4.RELEASE</version>
 </dependency>
 ``` 
 
 Gradle
 ```groovy
-implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.0.3.RELEASE'
+implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.0.4.RELEASE'
 ```
 
 The version indicates the compatibility with the Spring Boot. In other worlds, I'll try to keep it up to date with other
@@ -75,7 +75,57 @@ If the desired behavior is not to allow for threads to die, one can choose to di
 any StreamThreads happens to stop working, the health-check should take it into account. Alternatively, you can pick
 a desired number of minimum live StreamThreads to work with.
 
+### Autopilot
+
+An Autopilot aims to avoid unnecessary horizontal auto-scale behavior by, from time to time, accessing all accumulated 
+partition lag associated with this KafkaStreams App, and deciding to add or remove StreamThreads accordingly. The
+Autopilot can be allowed to run automatically by setting the property `management.health.autopilot.enabled` to `true`. 
+
+Once enabled, the Autopilot comes with its own health-check, but it should not be included in any _liveness_ or
+_readiness_ probes, as it only serves as a window to the functionality of the Autopilot.
+
+```txt
+management.endpoint.health.group.autopilot.include=autopilot
+```
+
+The Autopilot can have its behavior regulated by different properties.
+
+```txt
+management.health.autopilot.stream-thread-limit=5
+management.health.autopilot.lag-threshold=20_000
+management.health.autopilot.period=1m
+management.health.autopilot.timeout=600ms
+```
+
+
 ## Endpoints
+
+### Restart
+
+You can force-restart a running, and possible unresponsive, KafkaStreams instance by invoking the following 
+actuator endpoint. This will completely stop all running StreamThreads, and try to restart the entire Topology. This
+utility can leave the application in an unrecoverable state. 
+
+```
+/actuator/restart
+```
+
+You need to include the actuator and web dependencies from Spring Boot to access this endpoint.
+Further, you also need to add `restart` to `management.endpoints.web.exposure.include` property. By default, this endpoint is disabled.
+
+
+### Autopilot-Thread
+
+When enabled, the Autopilot comes with an endpoint to manually increase or decrease the current number of running 
+StreamThreads. By invoking the following endpoint with `POST` and `DELETE` HTTP Methods, you can increase and decrease
+the StreamThread count, respectively.
+
+```
+/actuator/autopilotthread
+```
+
+You need to include the actuator and web dependencies from Spring Boot to access this endpoint.
+Further, you also need to add `autopilotthread` to `management.endpoints.web.exposure.include` property. By default, this endpoint is disabled.
 
 ### Topology
 
@@ -88,7 +138,7 @@ You can access the Stream topology of your application in the following actuator
 You need to include the actuator and web dependencies from Spring Boot to access this endpoint.
 Further, you also need to add `topology` to `management.endpoints.web.exposure.include` property. By default, this endpoint is disabled.
 
-### State Store restores
+### State-Store-Restores
 
 You can access all executed State Store restorations of your application in the following actuator endpoints.
 
@@ -104,7 +154,7 @@ You need to include the actuator and web dependencies from Spring Boot to access
 Further, you also need to add `statestorerestore` endpoint to `management.endpoints.web.exposure.include` property. By default, this endpoint is disabled.
 
 
-### ReadOnly State Store queries
+### ReadOnly-State-Store Queries
 
 You can query for specific (key/value) and (key/timestamped value) pairs of a store. This action is performed both 
 locally and remotely, with gRPC support. For this reason, if you're running a cluster of Stream Applications, your App

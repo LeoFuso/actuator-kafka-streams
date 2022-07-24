@@ -46,10 +46,10 @@ public class AutopilotAutoConfiguration {
     @Bean
     @DependsOn({DEFAULT_STREAMS_BUILDER_BEAN_NAME})
     @ConditionalOnAvailableEndpoint
-    public AutopilotEndpoint autopilotEndpoint(ObjectProvider<Autopilot> provider) {
+    public AutopilotThreadEndpoint autopilotthreadEndpoint(ObjectProvider<Autopilot> provider) {
         final Autopilot autopilot = provider.getIfAvailable();
         if (autopilot != null) {
-            return new AutopilotEndpoint(autopilot);
+            return new AutopilotThreadEndpoint(autopilot);
         }
         return null;
     }

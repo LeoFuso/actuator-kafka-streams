@@ -4,4 +4,5 @@ io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsHealth
 io.github.leofuso.autoconfigure.actuator.kafka.streams.state.CompositeStateAutoConfiguration, \
 io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateRestoreEndpointAutoConfiguration, \
 io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.InteractiveQueryEndpointAutoConfiguration, \
-io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotAutoConfiguration
+io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotAutoConfiguration, \
+io.github.leofuso.autoconfigure.actuator.kafka.streams.restart.RestartEndpointAutoConfiguration
