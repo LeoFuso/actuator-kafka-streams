@@ -9,10 +9,10 @@ import org.apache.kafka.streams.state.QueryableStoreType;
 import org.springframework.util.concurrent.ListenableFuture;
 
 /**
- * Provides an easy Api to execute queries locally and remotely, without worrying about the lifecycle of all the
+ * Provides an easy API to execute queries locally and remotely, without worrying about the lifecycle of all the
  * required components.
  * <p>
- * Due to the nature of this Api, all invocations are relatively expensive and should be performed with care.
+ * Due to the nature of this API, all invocations are relatively expensive and should be performed with care.
  */
 public interface RemoteQuerySupport {
 
