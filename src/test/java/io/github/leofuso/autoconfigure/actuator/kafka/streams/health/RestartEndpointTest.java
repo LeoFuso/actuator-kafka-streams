@@ -73,6 +73,7 @@ class RestartEndpointTest {
             /* When */
             restart.restart();
 
+            /* Then */
             final StreamsBuilderFactoryBean factory = context.getBean(StreamsBuilderFactoryBean.class);
             assertThat(factory)
                     .isNotNull()
