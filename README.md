@@ -84,19 +84,20 @@ Autopilot can be allowed to run automatically by setting the property `managemen
 Once enabled, the Autopilot comes with its own health-check, but it should not be included in any _liveness_ or
 _readiness_ probes, as it only serves as a window to the functionality of the Autopilot.
 
-```txt
-management.endpoint.health.group.autopilot.include=autopilot
-```
-
 The Autopilot can have its behavior regulated by different properties.
 
 ```txt
-management.health.autopilot.stream-thread-limit=5
-management.health.autopilot.lag-threshold=20_000
-management.health.autopilot.period=1m
-management.health.autopilot.timeout=600ms
+management.health.autopilot.period=15s
+management.health.autopilot.timeout=45s
+management.health.autopilot.lag-threshold=10000
+management.health.autopilot.stream-thread-limit=3
+management.health.autopilot.exclusion-pattern=.*
 ```
 
+By order of appearance, the period in which the Autopilot will scan for partition-lag above the threshold, a timeout
+applied for each action performed by the Autopilot, a partition-lag threshold that coordinates all Autopilot actions,
+an upper limit for StreamThreads created by the Autopilot, and an exclusion pattern, if you want to have some
+topics excluded by the Autopilot scan. 
 
 ## Endpoints
 
