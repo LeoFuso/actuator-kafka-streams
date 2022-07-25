@@ -1,10 +1,10 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Positive;
 import javax.validation.constraints.PositiveOrZero;
 
 import java.time.Duration;
+import java.util.regex.Pattern;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -12,6 +12,15 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "management.health.autopilot")
 public class AutopilotConfigurationProperties {
+
+    /**
+     * Excludes topics from the lag calculation matching the specified pattern.
+     */
+    @NotNull
+    private Pattern exclusionPattern = Pattern.compile(
+            ".*(-changelog|subscription-registration-topic|-subscription-response-topic)$",
+            Pattern.CASE_INSENSITIVE
+    );
 
     /**
      * An upper bound of allowed StreamThreads running simultaneously.
@@ -24,7 +33,7 @@ public class AutopilotConfigurationProperties {
      * To trigger the creation or removal of new StreamThreads.
      */
     @NotNull
-    @Positive
+    @PositiveOrZero
     private Long lagThreshold = 20_000L;
 
     /**
@@ -38,6 +47,10 @@ public class AutopilotConfigurationProperties {
      */
     @NotNull
     private Duration timeout = Duration.ofMillis(600);
+
+    public Pattern getExclusionPattern() {
+        return exclusionPattern;
+    }
 
     public Integer getStreamThreadLimit() {
         return streamThreadLimit;
@@ -53,6 +66,10 @@ public class AutopilotConfigurationProperties {
 
     public Duration getTimeout() {
         return timeout;
+    }
+
+    public void setExclusionPattern(final Pattern exclusionPattern) {
+        this.exclusionPattern = exclusionPattern;
     }
 
     public void setStreamThreadLimit(final Integer streamThreadLimit) {

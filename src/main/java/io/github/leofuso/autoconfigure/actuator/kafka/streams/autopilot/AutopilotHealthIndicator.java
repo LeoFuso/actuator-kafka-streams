@@ -1,35 +1,38 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.boot.actuate.health.AbstractHealthIndicator;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactNumberFormatUtils;
+
 /**
  * Health indicator for {@link Autopilot}.
  */
 public class AutopilotHealthIndicator extends AbstractHealthIndicator {
-
-    private static final String KEY = "Autopilot";
 
     /**
      * {@link Status} indicating that the Autopilot is probably applying a Boost.
      */
     public static final Status BOOST = new Status(
             "BOOST",
-            "Status indicating that the Autopilot is probably applying a Boost"
+            "Autopilot is trying to increase StreamThread count, by applying a Boost."
     );
 
     /**
      * {@link Status} indicating that the Autopilot is probably applying a Nerf.
      */
     public static final Status NERF = new Status(
-            "NERD",
-            "Status indicating that the Autopilot is probably applying a Nerf"
+            "NERF",
+            "Autopilot is trying to reduce StreamThread count, by applying a Nerf."
     );
 
     private final Autopilot autopilot;
@@ -46,20 +49,12 @@ public class AutopilotHealthIndicator extends AbstractHealthIndicator {
     @Override
     protected void doHealthCheck(final Health.Builder builder) {
         try {
-            final Map<String, Object> details = new HashMap<>();
-            final Map<String, Map<TopicPartition, Long>> record = autopilot.lag();
-            record.forEach((thread, partitions) -> {
-                final Map<String, String> partitionDetails = new HashMap<>();
-                partitions.forEach(
-                        (partition, lag) -> {
-                            final String key = partition.toString();
-                            final String value = lag.toString();
-                            partitionDetails.put(key, value);
-                        });
-                details.put(thread, partitionDetails);
-            });
 
-            builder.withDetail(KEY, details);
+            final ArrayList<Map<String, Object>> details = new ArrayList<>();
+            final Map<String, Map<TopicPartition, Long>> record = autopilot.lag();
+            record.forEach(addDetails(details));
+            builder.withDetail("threads", details);
+
             if (autopilot.shouldBoost(record)) {
                 builder.status(BOOST);
                 return;
@@ -69,10 +64,35 @@ public class AutopilotHealthIndicator extends AbstractHealthIndicator {
                 builder.status(NERF);
                 return;
             }
+
             builder.up();
 
         } catch (Exception e) {
             builder.down(e);
         }
+    }
+
+    private static BiConsumer<String, Map<TopicPartition, Long>> addDetails(final ArrayList<Map<String, Object>> details) {
+        return (thread, partitions) -> {
+
+            final List<String> topicPartitions =
+                    partitions.entrySet()
+                              .stream()
+                              .sorted(Map.Entry.comparingByValue())
+                              .map(entry -> {
+                                  final TopicPartition key = entry.getKey();
+                                  final Long lag = entry.getValue();
+                                  final String compactLag = CompactNumberFormatUtils.format(lag);
+                                  return String.format("[ %s\t] %s", compactLag, key);
+                              })
+                              .collect(Collectors.toList());
+
+            final Map<String, Object> threadDetails = Map.of(
+                    "partitionLag", topicPartitions,
+                    "threadName", thread
+            );
+
+            details.add(threadDetails);
+        };
     }
 }

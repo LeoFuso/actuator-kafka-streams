@@ -85,7 +85,7 @@ public class ReadOnlyStateStoreEndpointTest {
     @DisplayName("Given a local state, with default key-serde, when queried, then should return correct value")
     void t3() {
         /* Given */
-        readonlystatestore(true, 9090)
+        readonlystatestore(true, 19090)
                 .run(context -> {
 
                     final UUID randomKey = UUID.randomUUID();
@@ -171,7 +171,7 @@ public class ReadOnlyStateStoreEndpointTest {
     @DisplayName("Given a local state, with supported key-serde, when queried, then should return correct value")
     void t5() {
         /* Given */
-        readonlystatestore(true, 9090)
+        readonlystatestore(true, 19090)
                 .run(context -> {
 
                     final String longKey = "25";
@@ -203,7 +203,7 @@ public class ReadOnlyStateStoreEndpointTest {
     @DisplayName("Given a local state, with unsupported mapping, when queried, then should return conversion error")
     void t6() {
         /* Given */
-        readonlystatestore(true, 9090)
+        readonlystatestore(true, 19090)
                 .run(context -> {
 
                     final String longKey = "25";

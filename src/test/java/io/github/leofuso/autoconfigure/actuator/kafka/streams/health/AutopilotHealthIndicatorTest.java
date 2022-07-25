@@ -35,12 +35,7 @@ import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.util
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.utils.KafkaStreamTestUtils.produce;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EmbeddedKafka(topics = {"out"},
-               partitions = 3,
-               brokerProperties = {
-                       "group.min.session.timeout.ms=10",
-               }
-)
+@EmbeddedKafka(topics = {"out"})
 @TestMethodOrder(MethodOrderer.MethodName.class)
 class AutopilotHealthIndicatorTest {
 
@@ -108,31 +103,24 @@ class AutopilotHealthIndicatorTest {
     @Timeout(15)
     @DisplayName("Given troublesome high-load, when asked for the autopilot, then should return Boost")
     void t4() {
-
         /* Given */
         final String topic = addRandomTopic(broker);
         autopilot(true)
                 .run(context -> {
                     final AutopilotHealthIndicator indicator = context.getBean(AutopilotHealthIndicator.class);
                     expect(indicator, Status.UP);
+                    /* When & Then */
                     produce(
                             broker,
-                            new ProducerRecord<>(topic, SIMULATE_HIGH_LOAD, "exception-value"),
-                            new ProducerRecord<>(topic, SIMULATE_HIGH_LOAD, "some-value-1"),
-                            new ProducerRecord<>(topic, SIMULATE_HIGH_LOAD, "some-value-2"),
-                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value-3"),
-                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value-4"),
-                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value-5"),
-                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value-6"),
-                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value-7")
+                            10,
+                            new ProducerRecord<>(topic, 0, String.valueOf(UUID.randomUUID()), SIMULATE_HIGH_LOAD)
                     );
-                    /* When & Then */
-                    expect(indicator, AutopilotHealthIndicator.BOOST, Duration.ofSeconds(2));
+                    expect(indicator, AutopilotHealthIndicator.BOOST);
                 });
     }
 
     @Test
-    @Timeout(5)
+    @Timeout(30)
     @Disabled("Only works alone. Hanging indefinitely.")
     @DisplayName("Given normal op, no record, and with additional threads, when asked for the autopilot, then should return Nerf")
     void t5() {
@@ -144,9 +132,10 @@ class AutopilotHealthIndicatorTest {
 
                     final AutopilotThreadEndpoint autopilotThread = context.getBean(AutopilotThreadEndpoint.class);
                     autopilotThread.addStreamThread();
+                    autopilotThread.addStreamThread();
 
                     /* When & Then */
-                    expect(indicator, AutopilotHealthIndicator.NERF);
+                    expect(indicator, AutopilotHealthIndicator.NERF, Duration.ofSeconds(15));
                 });
     }
 
@@ -156,10 +145,10 @@ class AutopilotHealthIndicatorTest {
                         "logging.level.org.apache.kafka=OFF",
                         "management.health.autopilot.enabled=" + enabled,
                         "management.endpoints.web.exposure.include=" + (enabled ? "autopilotthread" : ""),
-                        "management.health.autopilot.stream-thread-limit=5",
-                        "management.health.autopilot.lag-threshold=5",
-                        "management.health.autopilot.period=5s",
-                        "management.health.autopilot.timeout=600ms",
+                        "management.health.autopilot.stream-thread-limit=2",
+                        "management.health.autopilot.lag-threshold=1",
+                        "management.health.autopilot.period=1s",
+                        "management.health.autopilot.timeout=1m",
                         "spring.kafka.bootstrap-servers=" + broker.getBrokersAsString(),
                         "spring.kafka.streams.application-id=application-" + UUID.randomUUID(),
                         "spring.kafka.streams.cleanup.on-startup=true",
@@ -193,13 +182,16 @@ class AutopilotHealthIndicatorTest {
 
             final Pattern pattern = Pattern.compile(".*");
             builder.<String, String>stream(pattern, Consumed.as("in-consumer"))
-                   .filter((key, value) -> {
-                       if (key.equalsIgnoreCase(SIMULATE_HIGH_LOAD)) {
-                           try {
-                               Thread.sleep(10_000);
-                           } catch (InterruptedException ignored) { /* ignored */ }
+                   .mapValues((key, value) -> {
+                       final boolean highLoad = value.equalsIgnoreCase(SIMULATE_HIGH_LOAD);
+                       if (!highLoad) {
+                           return value;
                        }
-                       return true;
+                       try {
+                           Thread.sleep(1_000);
+                           return value;
+                       } catch (InterruptedException ignored) { /* ignored */ }
+                       return value;
                    }, Named.as("high-load-filter"))
                    .to("out", Produced.as("out-sink"));
         }

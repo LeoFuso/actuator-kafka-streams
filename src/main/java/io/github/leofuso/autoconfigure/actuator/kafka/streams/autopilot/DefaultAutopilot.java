@@ -2,7 +2,9 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
 import javax.annotation.Nullable;
 
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,8 +15,11 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.TaskMetadata;
@@ -24,13 +29,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactNumberFormatUtils;
+
 /**
  * A default implementation of the {@link Autopilot autopilot} API.
  */
 public class DefaultAutopilot implements Autopilot {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultAutopilot.class);
-
 
     /**
      * Used to access the {@link KafkaStreams}.
@@ -53,6 +59,17 @@ public class DefaultAutopilot implements Autopilot {
     private final Integer desiredThreadCount;
 
     /**
+     * Used to keep time between actions.
+     */
+    private Clock clock = Clock.systemUTC();
+
+    /**
+     * Timestamp of the last performed action.
+     */
+    private Instant previousAction = Instant.ofEpochMilli(Long.MIN_VALUE);
+
+
+    /**
      * Creates a new {@link Autopilot} instance. Automation can be activated and deactivated by invoking the
      * {@link Autopilot#initialize() initialize} and {@link Autopilot#shutdown()  shutdown} methods, respectively.
      *
@@ -67,41 +84,60 @@ public class DefaultAutopilot implements Autopilot {
         this.desiredThreadCount = Optional.ofNullable(streamProperties)
                                           .map(property -> (String) property.get(StreamsConfig.NUM_STREAM_THREADS_CONFIG))
                                           .map(Integer::parseInt)
-                                          .orElse(1);
+                                          .orElseGet(() -> {
+                                              final ConfigDef definition = StreamsConfig.configDef();
+                                              final Map<String, Object> defaultValues = definition.defaultValues();
+                                              return (Integer) defaultValues.getOrDefault(
+                                                      StreamsConfig.NUM_STREAM_THREADS_CONFIG,
+                                                      1
+                                              );
+                                          });
+    }
+
+    /**
+     * Used only to facilitate unit testing.
+     *
+     * @param clock a new {@link Clock} to keep track of time between actions.
+     */
+    public void setClock(Clock clock) {
+        this.clock = Objects.requireNonNull(clock, "Clock [clock] is required.");
     }
 
     @Override
     public boolean shouldBoost(final Map<String, Map<TopicPartition, Long>> lag) {
         final int threadCount = lag.size();
-        if(threadCount == 0) {
+        if (threadCount == 0) {
             return false;
         }
 
-        final Float perThreadLag = lag
+        final double partitionLag = lag
                 .values()
                 .stream()
                 .flatMap(thread -> {
                     final Collection<Long> threadLag = thread.values();
                     return threadLag.stream();
                 })
-                .reduce(Long::sum)
-                .map(accumulatedLag -> accumulatedLag / (float) threadCount)
-                .orElse(0.0f);
+                .mapToLong(v -> v)
+                .average()
+                .orElse(0.0);
 
         final long threshold = properties.getLagThreshold();
-        if (perThreadLag <= threshold) {
+        if (partitionLag <= threshold) {
             return false;
         }
 
         final Integer threadLimit = properties.getStreamThreadLimit();
         if (threadCount >= threadLimit) {
             logger.warn(
-                    "StreamThread count [{}] is above limit [{}]. Autopilot should not apply a Boost.",
+                    "Autopilot [NOOP]. StreamThread count [{}] has reached the limit [{}]. Will not apply a Boost.",
                     threadCount,
                     threadLimit
             );
             return false;
         }
+
+        final String prettyLag = CompactNumberFormatUtils.format((long) partitionLag);
+        logger.info("Autopilot found an average partition-lag of {}", prettyLag);
         return true;
     }
 
@@ -126,9 +162,12 @@ public class DefaultAutopilot implements Autopilot {
         final HashMap<String, Map<TopicPartition, Long>> record = new HashMap<>();
         final KafkaStreams streams = factory.getKafkaStreams();
         if (streams == null) {
-            logger.warn("Could not access the current lag: KafkaStreams not ready.");
+            logger.error("Autopilot [NOOP]. Could not access the current lag info, KafkaStreams not ready.");
             return record;
         }
+
+        final Pattern exclusionPattern = properties.getExclusionPattern();
+        final Predicate<String> exclusionPredicate = exclusionPattern.asPredicate();
 
         final Set<ThreadMetadata> localThreads = streams.metadataForLocalThreads();
         for (ThreadMetadata threadMetadata : localThreads) {
@@ -150,6 +189,12 @@ public class DefaultAutopilot implements Autopilot {
                 for (Map.Entry<TopicPartition, Long> endOffsetEntry : endOffsets.entrySet()) {
                     final TopicPartition partition = endOffsetEntry.getKey();
 
+                    final String topic = partition.topic();
+                    final boolean isExcluded = exclusionPredicate.test(topic);
+                    if (isExcluded) {
+                        continue;
+                    }
+
                     final Long endOffset = endOffsetEntry.getValue();
                     Long committedOffset = committedOffsets.get(partition);
 
@@ -167,7 +212,7 @@ public class DefaultAutopilot implements Autopilot {
 
     private void doAddStreamThread(@Nullable KafkaStreams streams) {
         if (streams == null) {
-            logger.error("Upscale failure. StreamsBuilderFactoryBean not started yet.");
+            logger.error("Autopilot [NOOP]. StreamsBuilderFactoryBean not started yet.");
             return;
         }
         streams.addStreamThread()
@@ -179,7 +224,7 @@ public class DefaultAutopilot implements Autopilot {
 
     private void doRemoveStreamThread(@Nullable KafkaStreams streams) {
         if (streams == null) {
-            logger.error("Upscale failure. StreamsBuilderFactoryBean not started yet.");
+            logger.error("Autopilot [NOOP]. StreamsBuilderFactoryBean not started yet.");
             return;
         }
         final Duration timeout = properties.getTimeout();
@@ -193,9 +238,19 @@ public class DefaultAutopilot implements Autopilot {
     @Override
     public void initialize() {
         final Duration period = properties.getPeriod();
+        final Duration initialDelay = period.dividedBy(2);
+
         final long periodInMillis = period.toMillis();
-        final long initialDelay = periodInMillis / 2;
-        executor.scheduleAtFixedRate(this, initialDelay, periodInMillis, TimeUnit.MILLISECONDS);
+        final long initialDelayInMillis = initialDelay.toMillis();
+        executor.scheduleAtFixedRate(this, initialDelayInMillis, periodInMillis, TimeUnit.MILLISECONDS);
+
+        final String prettyInitialDelay = CompactNumberFormatUtils.format(initialDelay);
+        final String prettyPeriod = CompactNumberFormatUtils.format(period);
+        logger.info(
+                "Autopilot scheduled. Will commence in {} with evaluation periods every {}.",
+                prettyInitialDelay,
+                prettyPeriod
+        );
     }
 
     @Override
@@ -208,19 +263,49 @@ public class DefaultAutopilot implements Autopilot {
 
     @Override
     public void run() {
+
+        logger.info(
+                "Autopilot is evaluating all StreamThreads. Looking for partition-lag above [{}].",
+                CompactNumberFormatUtils.format(properties.getLagThreshold())
+        );
+
         final Map<String, Map<TopicPartition, Long>> lag = lag();
         final int threadCount = lag.size();
         if (threadCount == 0) {
-            logger.warn("Skipping loop. Could not access any StreamThread lag.");
+            logger.error("Autopilot [NOOP]. Could not access any StreamThread lag.");
             return;
         }
 
+        final Instant nextAction = Instant.now(clock);
+        final Duration timeout = properties.getTimeout();
+        final Duration betweenActions = Duration.between(previousAction, nextAction);
+        final boolean canActuate = betweenActions.compareTo(timeout) >= 0;
+        if (!canActuate) {
+
+            final Duration period = properties.getPeriod();
+            final Duration timeoutRemaining = timeout.minus(betweenActions);
+            final Duration remaining = timeoutRemaining.plus(period);
+
+            final String prettyTimeout = CompactNumberFormatUtils.format(timeout);
+            final String prettyRemaining = CompactNumberFormatUtils.format(remaining);
+            logger.info(
+                    "Autopilot [NOOP]. Timeout of {}, will wait for another {}.",
+                    prettyTimeout,
+                    prettyRemaining
+            );
+            return;
+        }
+
+        previousAction = nextAction;
+
         if (shouldBoost(lag)) {
+            logger.info("Autopilot is applying a [BOOST].");
             addStreamThread();
             return;
         }
 
         if (shouldNerf(lag)) {
+            logger.info("Autopilot is applying a [NERF].");
             removeStreamThread();
         }
     }
