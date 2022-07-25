@@ -20,7 +20,7 @@ import io.github.leofuso.autoconfigure.actuator.kafka.streams.additional.serdes.
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.exceptions.UnableToLocateRemoteStoreException;
 
 /**
- * Default implementation of {@link RemoteQuerySupport Api}.
+ * Default implementation of {@link RemoteQuerySupport API}.
  */
 public class DefaultRemoteQuerySupport implements RemoteQuerySupport {
 

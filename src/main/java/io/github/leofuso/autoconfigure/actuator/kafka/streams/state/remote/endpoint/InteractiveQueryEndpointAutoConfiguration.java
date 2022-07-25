@@ -1,7 +1,6 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint;
 
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.errors.StreamsNotStartedException;
 import org.apache.kafka.streams.state.HostInfo;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
@@ -126,11 +125,7 @@ public class InteractiveQueryEndpointAutoConfiguration {
                     return builder.build();
 
                 })
-                .orElseThrow(() -> {
-                    final String message =
-                            "KafkaStreams has not been started, or hasn't been configured. Try again later.";
-                    return new StreamsNotStartedException(message);
-                });
+                .orElseThrow(() -> new IllegalStateException("A required config is missing [application.server]."));
     }
 
     @Bean

@@ -10,6 +10,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -25,14 +26,28 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
-import com.google.common.util.concurrent.MoreExecutors;
-
 import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG;
 import static org.apache.kafka.clients.producer.ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class KafkaStreamTestUtils {
+
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public static void produce(EmbeddedKafkaBroker embeddedKafka, int qtd, ProducerRecord<String, String> template) {
+        final ProducerRecord[] records =
+                IntStream.range(0, qtd)
+                         .mapToObj(value -> new ProducerRecord<>(
+                                 template.topic(),
+                                 template.partition(),
+                                 template.key(),
+                                 template.value()
+                         ))
+                         .toArray(ProducerRecord[]::new);
+        produce(embeddedKafka, records);
+    }
+
 
     @SafeVarargs
     public static void produce(EmbeddedKafkaBroker embeddedKafka, ProducerRecord<String, String>... records) {
@@ -90,7 +105,7 @@ public abstract class KafkaStreamTestUtils {
     }
 
     public static void expect(HealthIndicator indicator, Status expected) throws Throwable {
-        expect(indicator, expected, Duration.ofMillis(100));
+        expect(indicator, expected, Duration.ofMillis(200));
     }
 
     public static void expect(HealthIndicator indicator, Status expected, Duration initDelay) throws Throwable {
@@ -112,17 +127,19 @@ public abstract class KafkaStreamTestUtils {
             if (actual != expected) {
                 return;
             }
-            assertThat(actual).isSameAs(expected);
+            assertThat(actual).isEqualTo(expected);
             /* We need to end the execution */
-            @SuppressWarnings({"UnstableApiUsage", "unused"})
-            final boolean termination = MoreExecutors.shutdownAndAwaitTermination(executor, 0, TimeUnit.MILLISECONDS);
+            executor.shutdownNow();
         };
 
         try {
             final long initialDelay = initDelay.toMillis();
             executor.scheduleAtFixedRate(doHealthCheck, initialDelay, delay, TimeUnit.MILLISECONDS)
                     .get(initialDelay + timeout, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException | CancellationException ignored) { /* assertTrue(true) */ }
+        } catch (InterruptedException | CancellationException ignored) {
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
 }

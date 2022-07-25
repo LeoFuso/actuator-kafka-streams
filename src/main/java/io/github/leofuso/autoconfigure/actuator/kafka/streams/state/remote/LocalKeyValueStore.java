@@ -41,7 +41,10 @@ public class LocalKeyValueStore implements RemoteKeyValueStateStore {
                             .map(StreamsConfig::new)
                             .map(config -> config.getString(StreamsConfig.APPLICATION_SERVER_CONFIG))
                             .map(HostInfo::buildFromEndpoint)
-                            .orElseThrow();
+                            .orElseThrow(() -> {
+                                final String message = "A required config is missing [application.server].";
+                                return new IllegalStateException(message);
+                            });
     }
 
     public HostInfo self() {

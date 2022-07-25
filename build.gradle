@@ -10,7 +10,7 @@ plugins {
 }
 
 group 'io.github.leofuso'
-version 'v2.7.0.4-SNAPSHOT'
+version 'v2.7.0.4.RELEASE'
 
 
 repositories {
@@ -32,6 +32,7 @@ dependencyManagement {
 
 compileJava {
     options.compilerArgs << '-parameters'
+    inputs.files(tasks.named('processResources'))
 }
 
 java {
@@ -59,6 +60,7 @@ dependencies {
 
     /* Spring */
     principalImplementation 'org.springframework.boot:spring-boot-starter-actuator'
+    principalImplementation 'org.springframework.boot:spring-boot-starter-validation'
     principalImplementation 'org.springframework.kafka:spring-kafka'
     principalImplementation 'org.apache.kafka:kafka-streams'
     principalImplementation 'com.fasterxml.jackson.core:jackson-databind'
