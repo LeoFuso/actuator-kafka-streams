@@ -235,6 +235,15 @@ Optionally, you can import all dependencies by yourself, e.g, if you're using Ma
 ``` 
 
 
+## Contributors
+and a special thanks to
+
+[![Linkedin Badge](https://img.shields.io/badge/-fcarvalhooliveira-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/in/fcarvalhooliveira/)](https://www.linkedin.com/in/fcarvalhooliveira/)
+[![Github Badge](https://img.shields.io/badge/-fcoliveira-000?style=flat-square&logo=Github&logoColor=white&link=https://github.com/fcoliveira)](https://github.com/fcoliveira)
+
+
+[![Linkedin Badge](https://img.shields.io/badge/-renatomms-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/in/renatomms/)](https://www.linkedin.com/in/renatomms/)
+
 
 
 
