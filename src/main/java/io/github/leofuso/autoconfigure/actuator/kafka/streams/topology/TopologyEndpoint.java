@@ -1,5 +1,6 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.topology;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.kafka.streams.Topology;
@@ -19,12 +20,22 @@ public class TopologyEndpoint {
      */
     public static final String NO_TOPOLOGY_FOUND_MSG = "No topology found.";
 
+    /**
+     * Used to access the {@link Topology}.
+     */
     private final StreamsBuilderFactoryBean factoryBean;
 
-    public TopologyEndpoint(final StreamsBuilderFactoryBean factoryBean) {
-        this.factoryBean = factoryBean;
+    /**
+     * Create a new {@link TopologyEndpoint} instance.
+     * @param factory used to extract the stringified topology.
+     */
+    public TopologyEndpoint(final StreamsBuilderFactoryBean factory) {
+        this.factoryBean = Objects.requireNonNull(factory, "StreamsBuilderFactoryBean [factory] is required.");
     }
 
+    /**
+     * @return if available, returns a stringified version of the {@link Topology}.
+     */
     @ReadOperation
     public String topology() {
         return Optional.of(factoryBean)

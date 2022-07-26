@@ -5,6 +5,7 @@ import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfi
 import org.springframework.boot.actuate.autoconfigure.endpoint.condition.ConditionalOnAvailableEndpoint;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
@@ -12,8 +13,13 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpoint;
+
 import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_BUILDER_BEAN_NAME;
 
+/**
+ * {@link EnableAutoConfiguration Auto-configuration} for {@link RestartEndpoint Restart endpoint}.
+ */
 @AutoConfiguration(after = {EndpointAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class})
 @ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class, Endpoint.class})
 @ConditionalOnBean(value = {StreamsBuilderFactoryBean.class})
