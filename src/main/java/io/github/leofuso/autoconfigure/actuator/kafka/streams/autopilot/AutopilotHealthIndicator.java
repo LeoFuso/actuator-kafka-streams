@@ -51,19 +51,12 @@ public class AutopilotHealthIndicator extends AbstractHealthIndicator {
         try {
 
             final ArrayList<Map<String, Object>> details = new ArrayList<>();
-            final Map<String, Map<TopicPartition, Long>> record = autopilot.lag();
+            final Map<String, Map<TopicPartition, Long>> record = autopilot.threads();
             record.forEach(addDetails(details));
             builder.withDetail("threads", details);
 
-            if (autopilot.shouldBoost(record)) {
-                builder.status(BOOST);
-                return;
-            }
+            final Autopilot.State state = autopilot.state();
 
-            if (autopilot.shouldNerf(record)) {
-                builder.status(NERF);
-                return;
-            }
 
             builder.up();
 
@@ -83,7 +76,7 @@ public class AutopilotHealthIndicator extends AbstractHealthIndicator {
                                   final TopicPartition key = entry.getKey();
                                   final Long lag = entry.getValue();
                                   final String compactLag = CompactNumberFormatUtils.format(lag);
-                                  return String.format("[ %s\t] %s", compactLag, key);
+                                  return String.format("[ %s] %s", compactLag, key);
                               })
                               .collect(Collectors.toList());
 
