@@ -97,11 +97,6 @@ public interface Autopilot extends Runnable {
     void run();
 
     /**
-     * @return the next {@link State} based on  {@link #threads() thread} info.
-     */
-    State decideNextState();
-
-    /**
      * Invoke the creation of an additional
      * {@link org.apache.kafka.streams.processor.internals.StreamThread StreamThread}.
      */

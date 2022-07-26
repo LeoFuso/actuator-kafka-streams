@@ -192,12 +192,12 @@ public class DefaultAutopilot implements Autopilot {
             case BOOSTING -> {
                 state = State.BOOSTING;
                 logger.info("Autopilot is [{}] the StreamThread count.", state);
-                addStreamThread();
+                doAddStreamThread();
             }
             case DECREASING -> {
                 state = State.DECREASING;
                 logger.info("Autopilot is [{}] the StreamThread count.", state);
-                removeStreamThread();
+                doRemoveStreamThread();
             }
         }
 
@@ -205,8 +205,7 @@ public class DefaultAutopilot implements Autopilot {
         previousAction = nextAction;
     }
 
-    @Override
-    public State decideNextState() {
+    private State decideNextState() {
 
         final int threadCount = threadInfo.size();
         final long accumulatedLag = threadInfo
@@ -250,6 +249,21 @@ public class DefaultAutopilot implements Autopilot {
 
     @Override
     public void addStreamThread() {
+        if (state != State.BOOSTED && state != State.STAND_BY) {
+            final String message = "Autopilot [NOOP]. Cannot manually transition from [%s] to [%s].".formatted(
+                    state,
+                    State.BOOSTING
+            );
+            throw new IllegalStateException(message);
+        }
+        synchronized (stateLock) {
+            doAddStreamThread();
+        }
+        stateLock.notifyAll();
+    }
+
+    private void doAddStreamThread() {
+
         final KafkaStreams streams = factory.getKafkaStreams();
         if (streams == null) {
             logger.error("Autopilot [NOOP]. StreamsBuilderFactoryBean not started yet.");
@@ -260,13 +274,17 @@ public class DefaultAutopilot implements Autopilot {
                 .supplyAsync(streams::addStreamThread)
                 .whenCompleteAsync((optional, throwable) -> {
 
-                    if(throwable != null) {
-                        logger.error("Oops, something went wrong. Autopilot couldn't add a new StreamThread.", throwable);
+                    threads();
+                    if (throwable != null) {
+                        logger.error(
+                                "Oops, something went wrong. Autopilot couldn't add a new StreamThread.",
+                                throwable
+                        );
                         return;
                     }
 
                     final boolean empty = optional.isEmpty();
-                    if(empty) {
+                    if (empty) {
                         logger.error("Oops, something went wrong. Autopilot couldn't add a new StreamThread.");
                         return;
                     }
@@ -279,6 +297,19 @@ public class DefaultAutopilot implements Autopilot {
 
     @Override
     public void removeStreamThread() {
+        if (state != State.BOOSTED) {
+            final String message = "Autopilot [NOOP]. Cannot manually transition from [%s] to [%s].".formatted(
+                    state,
+                    State.BOOSTING
+            );
+            throw new IllegalStateException(message);
+        }
+        synchronized (stateLock) {
+            doRemoveStreamThread();
+        }
+        stateLock.notifyAll();
+    }
+    private void doRemoveStreamThread() {
         final KafkaStreams streams = factory.getKafkaStreams();
         if (streams == null) {
             logger.error("Autopilot [NOOP]. StreamsBuilderFactoryBean not started yet.");
@@ -292,18 +323,21 @@ public class DefaultAutopilot implements Autopilot {
                 })
                 .whenCompleteAsync((optional, throwable) -> {
 
-                    if(throwable != null) {
-                        logger.error("Oops, something went wrong. Autopilot couldn't remove any StreamThread.", throwable);
+                    threads();
+                    if (throwable != null) {
+                        logger.error(
+                                "Oops, something went wrong. Autopilot couldn't remove any StreamThread.",
+                                throwable);
                         return;
                     }
 
                     final boolean empty = optional.isEmpty();
-                    if(empty) {
+                    if (empty) {
                         logger.error("Oops, something went wrong. Autopilot couldn't remove any StreamThread.");
                         return;
                     }
 
-                    logger.info("StreamThread [{}] successfully removed by Autopilot.",  optional.get());
+                    logger.info("StreamThread [{}] successfully removed by Autopilot.", optional.get());
                     state = decideNextState();
 
                 }, executor);

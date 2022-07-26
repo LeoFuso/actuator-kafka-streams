@@ -1,5 +1,7 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
+import java.util.Objects;
+
 import org.springframework.boot.actuate.endpoint.annotation.DeleteOperation;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
@@ -20,8 +22,8 @@ public class AutopilotThreadEndpoint {
      *
      * @param autopilot to delegate the actions to.
      */
-    public AutopilotThreadEndpoint(final Autopilot autopilot) {
-        this.autopilot = autopilot;
+    public AutopilotThreadEndpoint(Autopilot autopilot) {
+        this.autopilot = Objects.requireNonNull(autopilot, "Autopilot [autopilot] is required.");
     }
 
     /**
