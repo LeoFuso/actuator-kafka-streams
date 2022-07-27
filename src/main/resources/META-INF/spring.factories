@@ -1,6 +1,6 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
 io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpointAutoConfiguration, \
-io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsHealthIndicatorAutoConfiguration, \
+io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KStreamsHealthIndicatorAutoConfiguration, \
 io.github.leofuso.autoconfigure.actuator.kafka.streams.state.CompositeStateAutoConfiguration, \
 io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateRestoreEndpointAutoConfiguration, \
 io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.InteractiveQueryEndpointAutoConfiguration, \

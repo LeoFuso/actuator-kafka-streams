@@ -41,11 +41,11 @@ import static org.assertj.core.api.Assertions.assertThat;
                }
 )
 @TestMethodOrder(MethodOrderer.MethodName.class)
-class KafkaStreamsHealthIndicatorTest {
+class KStreamsHealthIndicatorTest {
 
     private final EmbeddedKafkaBroker broker;
 
-    KafkaStreamsHealthIndicatorTest(final EmbeddedKafkaBroker broker) {
+    KStreamsHealthIndicatorTest(final EmbeddedKafkaBroker broker) {
         this.broker = broker;
     }
 
@@ -57,7 +57,7 @@ class KafkaStreamsHealthIndicatorTest {
     void th0() {
         /* Given, When & Then */
         healthCheck(true)
-                .run(context -> assertThat(context).hasSingleBean(KafkaStreamsHealthIndicator.class));
+                .run(context -> assertThat(context).hasSingleBean(KStreamsHealthIndicator.class));
     }
 
     @Test
@@ -65,7 +65,7 @@ class KafkaStreamsHealthIndicatorTest {
     void th1() {
         /* Given, When & Then */
         healthCheck(false)
-                .run(context -> assertThat(context).doesNotHaveBean(KafkaStreamsHealthIndicator.class));
+                .run(context -> assertThat(context).doesNotHaveBean(KStreamsHealthIndicator.class));
     }
 
     @Test
@@ -73,7 +73,7 @@ class KafkaStreamsHealthIndicatorTest {
     void th2() {
         /* Given */
         healthCheck(true).run(context -> {
-            final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
+            final KStreamsHealthIndicator indicator = context.getBean(KStreamsHealthIndicator.class);
             /* When & Then */
             expect(indicator, Status.UP);
         });
@@ -87,7 +87,7 @@ class KafkaStreamsHealthIndicatorTest {
 
         final String topic = addRandomTopic(broker);
         healthCheck(true).run(context -> {
-            final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
+            final KStreamsHealthIndicator indicator = context.getBean(KStreamsHealthIndicator.class);
             produce(
                     broker,
                     new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
@@ -109,7 +109,7 @@ class KafkaStreamsHealthIndicatorTest {
                         () -> fb -> fb.setStreamsUncaughtExceptionHandler(exception -> SHUTDOWN_CLIENT)
                 )
                 .run(context -> {
-                    final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
+                    final KStreamsHealthIndicator indicator = context.getBean(KStreamsHealthIndicator.class);
                     expect(indicator, Status.UP);
                     produce(
                             broker,
@@ -133,7 +133,7 @@ class KafkaStreamsHealthIndicatorTest {
                         () -> fb -> fb.setStreamsUncaughtExceptionHandler(exception -> SHUTDOWN_APPLICATION)
                 )
                 .run(context -> {
-                    final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
+                    final KStreamsHealthIndicator indicator = context.getBean(KStreamsHealthIndicator.class);
                     expect(indicator, Status.UP);
                     produce(
                             broker,
@@ -157,7 +157,7 @@ class KafkaStreamsHealthIndicatorTest {
                         () -> fb -> fb.setStreamsUncaughtExceptionHandler(exception -> REPLACE_THREAD)
                 )
                 .run(context -> {
-                    final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
+                    final KStreamsHealthIndicator indicator = context.getBean(KStreamsHealthIndicator.class);
                     expect(indicator, Status.UP);
 
                     produce(
@@ -191,7 +191,7 @@ class KafkaStreamsHealthIndicatorTest {
                         () -> fb -> fb.setStreamsUncaughtExceptionHandler(exception -> REPLACE_THREAD)
                 )
                 .run(context -> {
-                    final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
+                    final KStreamsHealthIndicator indicator = context.getBean(KStreamsHealthIndicator.class);
                     expect(indicator, Status.UP);
 
                     produce(
@@ -215,7 +215,7 @@ class KafkaStreamsHealthIndicatorTest {
         final String topic = addRandomTopic(broker);
         healthCheck(true)
                 .run(context -> {
-                    final KafkaStreamsHealthIndicator indicator = context.getBean(KafkaStreamsHealthIndicator.class);
+                    final KStreamsHealthIndicator indicator = context.getBean(KStreamsHealthIndicator.class);
                     expect(indicator, Status.UP);
                     produce(
                             broker,
@@ -255,10 +255,13 @@ class KafkaStreamsHealthIndicatorTest {
                 .withConfiguration(
                         AutoConfigurations.of(
                                 KafkaAutoConfiguration.class,
-                                KafkaStreamsHealthIndicatorAutoConfiguration.class
+                                KStreamsHealthIndicatorAutoConfiguration.class
                         ));
     }
 
+    /**
+     * Dummy App.
+     */
     @Configuration
     public static class KStreamApplication {
 

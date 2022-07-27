@@ -130,7 +130,7 @@ public interface Autopilot extends Runnable {
         /**
          * @return the description.
          */
-        public String getDescription() {
+        public String description() {
             return description;
         }
     }

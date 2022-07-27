@@ -1,8 +1,6 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore;
 
 import java.time.Clock;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.streams.processor.StateRestoreListener;
 import org.springframework.beans.factory.ObjectProvider;
@@ -15,9 +13,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
-import org.springframework.kafka.config.StreamsBuilderFactoryBeanConfigurer;
-
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsHealthIndicator;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for {@link StateRestoreListener} feature and its endpoint.

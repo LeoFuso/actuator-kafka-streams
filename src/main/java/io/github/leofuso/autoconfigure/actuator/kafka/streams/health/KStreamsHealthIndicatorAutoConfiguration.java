@@ -16,11 +16,11 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
-import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KafkaStreamsHealthIndicatorAutoConfiguration.INDICATOR;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KStreamsHealthIndicatorAutoConfiguration.INDICATOR;
 import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_BUILDER_BEAN_NAME;
 
 /**
- * {@link EnableAutoConfiguration Auto-configuration} for {@link KafkaStreamsHealthIndicator}.
+ * {@link EnableAutoConfiguration Auto-configuration} for {@link KStreamsHealthIndicator}.
  */
 @AutoConfiguration(
         after = {KafkaStreamsDefaultConfiguration.class},
@@ -29,45 +29,41 @@ import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfigurat
 @ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class})
 @ConditionalOnBean(value = {StreamsBuilderFactoryBean.class})
 @ConditionalOnEnabledHealthIndicator(INDICATOR)
-@EnableConfigurationProperties(KafkaStreamHealthIndicatorProperties.class)
-public class KafkaStreamsHealthIndicatorAutoConfiguration {
+@EnableConfigurationProperties(KStreamsIndicatorProperties.class)
+public class KStreamsHealthIndicatorAutoConfiguration {
 
     /**
-     * Global reference for the {@link KafkaStreamsHealthIndicator indicator}.
+     * Global reference for the {@link KStreamsHealthIndicator indicator}.
      */
     public static final String INDICATOR = "kstreams";
 
     /**
      * Properties file.
      */
-    private final KafkaStreamHealthIndicatorProperties properties;
+    private final KStreamsIndicatorProperties properties;
 
     /**
      * Creates a new KafkaStreamsHealthIndicatorAutoConfiguration instance.
      *
-     * @param properties used to configure the {@link KafkaStreamsHealthIndicator indicator}.
+     * @param properties used to configure the {@link KStreamsHealthIndicator indicator}.
      */
-    public KafkaStreamsHealthIndicatorAutoConfiguration(final KafkaStreamHealthIndicatorProperties properties) {
+    public KStreamsHealthIndicatorAutoConfiguration(final KStreamsIndicatorProperties properties) {
         this.properties = Objects.requireNonNull(properties, "Missing required properties.");
     }
 
     /**
-     * Main bean factory for the {@link KafkaStreamsHealthIndicator}.
+     * Main bean factory for the {@link KStreamsHealthIndicator}.
      *
-     * @param provider used to create a {@link KafkaStreamsHealthIndicator}.
-     * @return a new {@link KafkaStreamsHealthIndicator}.
+     * @param provider used to create a {@link KStreamsHealthIndicator}.
+     * @return a new {@link KStreamsHealthIndicator}.
      */
     @Bean
     @DependsOn({DEFAULT_STREAMS_BUILDER_BEAN_NAME})
     @ConditionalOnMissingBean(name = "kstreamsHealthIndicator")
-    public KafkaStreamsHealthIndicator kstreamsHealthIndicator(ObjectProvider<StreamsBuilderFactoryBean> provider) {
+    public KStreamsHealthIndicator kstreamsHealthIndicator(ObjectProvider<StreamsBuilderFactoryBean> provider) {
         final StreamsBuilderFactoryBean factory = provider.getIfAvailable();
         if (factory != null) {
-            return new KafkaStreamsHealthIndicator(
-                    factory,
-                    !properties.isAllowThreadLoss(),
-                    properties.getMinimumNumberOfLiveStreamThreads()
-            );
+            return new KStreamsHealthIndicator(factory, properties);
         }
         return null;
     }

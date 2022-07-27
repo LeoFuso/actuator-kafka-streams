@@ -1,5 +1,7 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.utils;
 
+import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -15,7 +17,11 @@ import static org.apache.kafka.common.config.ConfigDef.parseType;
  */
 public abstract class ConfigUtils {
 
-    public static <T> Optional<T> access(Properties prop, String key, ConfigDef definition) {
+    public static <T> Optional<T> access(@Nullable Properties prop, String key, ConfigDef definition) {
+
+        if(prop == null) {
+            return Optional.empty();
+        }
 
         final Map<String, ConfigKey> keyMap = definition.configKeys();
         final ConfigKey keyDef = keyMap.get(key);

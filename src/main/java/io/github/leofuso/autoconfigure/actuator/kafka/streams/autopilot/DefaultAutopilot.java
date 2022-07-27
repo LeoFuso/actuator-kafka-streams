@@ -104,7 +104,7 @@ public class DefaultAutopilot implements Autopilot {
     /**
      * Helper to format huge numbers, commonly placed in situations of high partition-lag.
      */
-    private final NumberFormat numberFormat = NumberFormat.getCompactNumberInstance(
+    private static final NumberFormat numberFormat = NumberFormat.getCompactNumberInstance(
             Locale.US,
             NumberFormat.Style.SHORT
     );

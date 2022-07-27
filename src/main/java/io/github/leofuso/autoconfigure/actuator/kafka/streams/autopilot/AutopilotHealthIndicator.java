@@ -1,18 +1,21 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
-import java.util.ArrayList;
+import java.text.NumberFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
+import java.util.function.BiFunction;
 
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.boot.actuate.health.AbstractHealthIndicator;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactNumberFormatUtils;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State.BOOSTED;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State.BOOSTING;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State.DECREASING;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State.STAND_BY;
 
 /**
  * Health indicator for {@link Autopilot}.
@@ -20,72 +23,81 @@ import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactNumbe
 public class AutopilotHealthIndicator extends AbstractHealthIndicator {
 
     /**
-     * {@link Status} indicating that the Autopilot is probably applying a Boost.
+     * Helper to format huge numbers, commonly placed in situations of high partition-lag.
      */
-    public static final Status BOOST = new Status(
-            "BOOST",
-            "Autopilot is trying to increase StreamThread count, by applying a Boost."
+    private static final NumberFormat numberFormat = NumberFormat.getCompactNumberInstance(
+            Locale.US,
+            NumberFormat.Style.SHORT
     );
 
-    /**
-     * {@link Status} indicating that the Autopilot is probably applying a Nerf.
-     */
-    public static final Status NERF = new Status(
-            "NERF",
-            "Autopilot is trying to reduce StreamThread count, by applying a Nerf."
-    );
+    public static final Map<Autopilot.State, Status> statuses =
+            Map.of(
+                    STAND_BY, new Status(STAND_BY.name(), STAND_BY.description()),
+                    BOOSTING, new Status(BOOSTING.name(), BOOSTING.description()),
+                    BOOSTED, new Status(BOOSTED.name(), BOOSTED.description()),
+                    DECREASING, new Status(DECREASING.name(), DECREASING.description())
+            );
 
-    private final Autopilot autopilot;
+    private final AutopilotSupport support;
 
     /**
      * Create a new AutopilotHealthIndicator instance.
      *
-     * @param autopilot to access the recorded lag.
+     * @param support to access the recorded lag.
      */
-    public AutopilotHealthIndicator(final Autopilot autopilot) {
-        this.autopilot = Objects.requireNonNull(autopilot, "Autopilot [autopilot] is required.");
+    public AutopilotHealthIndicator(AutopilotSupport support) {
+        this.support = Objects.requireNonNull(support, "AutopilotSupport [support] is required.");
     }
 
     @Override
     protected void doHealthCheck(final Health.Builder builder) {
         try {
 
-            final ArrayList<Map<String, Object>> details = new ArrayList<>();
-            final Map<String, Map<TopicPartition, Long>> record = autopilot.threadInfo();
-            record.forEach(addDetails(details));
-            builder.withDetail("threads", details);
+            final List<Map<String, Object>> threads =
+                    support.invoke(Autopilot::threadInfo)
+                           .orElseGet(Map::of)
+                           .entrySet()
+                           .stream()
+                           .map(entry -> {
+                               final String key = entry.getKey();
+                               final Map<TopicPartition, Long> value = entry.getValue();
+                               return getDetails().apply(key, value);
+                           })
+                           .toList();
 
-            final Autopilot.State state = autopilot.state();
+            builder.withDetail("threads", threads);
+            final Status status = support
+                    .invoke(Autopilot::state)
+                    .map(statuses::get)
+                    .orElse(Status.DOWN);
 
-
-            builder.up();
+            builder.status(status);
 
         } catch (Exception e) {
             builder.down(e);
         }
     }
 
-    private static BiConsumer<String, Map<TopicPartition, Long>> addDetails(final ArrayList<Map<String, Object>> details) {
-        return (thread, partitions) -> {
+    private static BiFunction<String, Map<TopicPartition, Long>, Map<String, Object>> getDetails() {
 
-            final List<String> topicPartitions =
+        return (thread, partitions) -> {
+            final List<String> partitionDetails =
                     partitions.entrySet()
                               .stream()
                               .sorted(Map.Entry.comparingByValue())
                               .map(entry -> {
                                   final TopicPartition key = entry.getKey();
                                   final Long lag = entry.getValue();
-                                  final String compactLag = CompactNumberFormatUtils.format(lag);
-                                  return String.format("[ %s] %s", compactLag, key);
+                                  final String compactLag = numberFormat.format(lag);
+                                  return String.format("[ %s\u0009] %s", compactLag, key);
                               })
-                              .collect(Collectors.toList());
+                              .toList();
 
-            final Map<String, Object> threadDetails = Map.of(
-                    "partitionLag", topicPartitions,
-                    "threadName", thread
+            return Map.ofEntries(
+                    Map.entry("name", thread),
+                    Map.entry("partitions", partitionDetails)
             );
 
-            details.add(threadDetails);
         };
     }
 }
