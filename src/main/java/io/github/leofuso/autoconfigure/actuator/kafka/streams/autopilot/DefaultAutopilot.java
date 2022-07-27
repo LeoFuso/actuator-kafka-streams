@@ -16,6 +16,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -33,6 +34,9 @@ import com.google.common.collect.Sets;
 
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactNumberFormatUtils;
 
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfigurationProperties.Period;
+import static java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
 /**
  * A default implementation of the {@link Autopilot autopilot} API.
  */
@@ -48,27 +52,13 @@ public class DefaultAutopilot implements Autopilot {
     /**
      * A lock for the {@link io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State}.
      */
-    private final Object stateLock = new Object();
-
-    /**
-     * Used to access the {@link KafkaStreams}.
-     */
-    private final StreamsBuilderFactoryBean factory;
-
-    /**
-     * To coordinate the {@link Autopilot autopilot}.
-     */
-    private final AutopilotConfigurationProperties properties;
+    private final ReentrantReadWriteLock stateLock = new ReentrantReadWriteLock(true);
 
     /**
      * Stores the most recent lag info.
      */
     private final Map<String, Map<TopicPartition, Long>> threadInfo = new HashMap<>();
 
-    /**
-     * The initial thread count defined by the user.
-     */
-    private final Integer desiredThreadCount;
 
     /**
      * As long as the target is above or bellow the {@link DefaultAutopilot#desiredThreadCount}, an action must be
@@ -77,18 +67,25 @@ public class DefaultAutopilot implements Autopilot {
     private Integer targetThreadCount;
 
     /**
-     * Timestamp of the last performed action.
+     * The initial thread count defined by the user.
      */
-    private Instant previousAction = Instant.ofEpochMilli(Long.MIN_VALUE);
+    private final Integer desiredThreadCount;
+
+    private final RecoveryWindow recoveryWindow;
+
+    /**
+     * Used to access the {@link KafkaStreams}.
+     */
+    private final StreamsBuilderFactoryBean factory;
+    /**
+     * To coordinate the {@link Autopilot autopilot}.
+     */
+    private final AutopilotConfigurationProperties properties;
 
     /**
      * {@link java.util.concurrent.Executor Executor} responsible for running the {@link Autopilot autopilot}.
      */
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    /**
-     * Used to keep time between actions.
-     */
-    private Clock clock = Clock.systemUTC();
 
     private final NumberFormat numberFormat = NumberFormat.getCompactNumberInstance(
             Locale.US,
@@ -118,15 +115,7 @@ public class DefaultAutopilot implements Autopilot {
                                               );
                                           });
         this.targetThreadCount = this.desiredThreadCount;
-    }
-
-    /**
-     * Used only to facilitate unit testing.
-     *
-     * @param clock a new {@link Clock} to keep track of time between actions.
-     */
-    public void setClock(Clock clock) {
-        this.clock = Objects.requireNonNull(clock, "Clock [clock] is required.");
+        this.recoveryWindow = Autopilot.recoveryWindow(properties);
     }
 
     @Override
@@ -138,14 +127,19 @@ public class DefaultAutopilot implements Autopilot {
                 numberFormat.format(threshold)
         );
 
+        final WriteLock lock = stateLock.writeLock();
+        final boolean unlocked = lock.tryLock();
+        if (!unlocked) {
+            logger.info("Autopilot [NOOP]. Could not get lock, is someone else holding it?");
+            return;
+        }
+
         try {
-            synchronized (stateLock) {
-                doRun();
-            }
+            doRun();
         } catch (Exception ex) {
             logger.error("Autopilot [NOOP]. Something went wrong.", ex);
         } finally {
-            stateLock.notifyAll();
+            lock.unlock();
         }
     }
 
@@ -167,22 +161,8 @@ public class DefaultAutopilot implements Autopilot {
             return;
         }
 
-        final Instant nextAction = Instant.now(clock);
-        final Duration timeout = properties.getTimeout();
-        final Duration betweenActions = Duration.between(previousAction, nextAction);
-        final boolean canActuate = betweenActions.compareTo(timeout) >= 0;
-        if (!canActuate) {
-            final Duration period = properties.getPeriod();
-            final Duration timeoutRemaining = timeout.minus(betweenActions);
-            final Duration remaining = timeoutRemaining.plus(period);
-
-            final String prettyTimeout = CompactNumberFormatUtils.format(timeout);
-            final String prettyRemaining = CompactNumberFormatUtils.format(remaining);
-            logger.info(
-                    "Autopilot [NOOP]. Timeout of {}, will wait for another {}.",
-                    prettyTimeout,
-                    prettyRemaining
-            );
+        final boolean isOpen = !recoveryWindow.hasClosed();
+        if (isOpen) {
             return;
         }
 
@@ -200,9 +180,6 @@ public class DefaultAutopilot implements Autopilot {
                 doRemoveStreamThread();
             }
         }
-
-        /* Updates the timeout clock */
-        previousAction = nextAction;
     }
 
     private State decideNextState() {
@@ -239,8 +216,10 @@ public class DefaultAutopilot implements Autopilot {
             }
         }
 
-        logger.info("Autopilot found StreamThread target count to be {}", targetThreadCount);
-
+        logger.info(
+                "Autopilot found StreamThread target count to be {}, current is {}",
+                targetThreadCount,
+                threadCount);
         return targetThreadCount > threadCount ? State.BOOSTING
                 : targetThreadCount < threadCount ? State.DECREASING
                 : targetThreadCount.equals(desiredThreadCount) ? State.STAND_BY
@@ -256,10 +235,19 @@ public class DefaultAutopilot implements Autopilot {
             );
             throw new IllegalStateException(message);
         }
-        synchronized (stateLock) {
-            doAddStreamThread();
+
+        final WriteLock lock = stateLock.writeLock();
+        final boolean unlocked = lock.tryLock();
+        if (!unlocked) {
+            throw new IllegalStateException("Autopilot [NOOP]. Could not get lock, is someone else holding it?");
         }
-        stateLock.notifyAll();
+
+        try {
+            doAddStreamThread();
+        } finally {
+            lock.unlock();
+        }
+
     }
 
     private void doAddStreamThread() {
@@ -304,11 +292,20 @@ public class DefaultAutopilot implements Autopilot {
             );
             throw new IllegalStateException(message);
         }
-        synchronized (stateLock) {
-            doRemoveStreamThread();
+
+        final WriteLock lock = stateLock.writeLock();
+        final boolean unlocked = lock.tryLock();
+        if (!unlocked) {
+            throw new IllegalStateException("Autopilot [NOOP]. Could not get lock, is someone else holding it?");
         }
-        stateLock.notifyAll();
+
+        try {
+            doRemoveStreamThread();
+        } finally {
+            lock.unlock();
+        }
     }
+
     private void doRemoveStreamThread() {
         final KafkaStreams streams = factory.getKafkaStreams();
         if (streams == null) {
@@ -318,8 +315,9 @@ public class DefaultAutopilot implements Autopilot {
 
         CompletableFuture
                 .supplyAsync(() -> {
-                    final Duration timeout = properties.getTimeout();
-                    return streams.removeStreamThread(timeout);
+                    final Period period = properties.getPeriod();
+                    final Duration recoveryWindow = period.getRecoveryWindow();
+                    return streams.removeStreamThread(recoveryWindow);
                 })
                 .whenCompleteAsync((optional, throwable) -> {
 
@@ -346,6 +344,11 @@ public class DefaultAutopilot implements Autopilot {
     @Override
     public State state() {
         return state;
+    }
+
+    @Override
+    public RecoveryWindow recoveryWindow() {
+        return recoveryWindow;
     }
 
     @Override
@@ -415,15 +418,18 @@ public class DefaultAutopilot implements Autopilot {
 
     @Override
     public void initialize() {
-        final Duration period = properties.getPeriod();
-        final Duration initialDelay = period.dividedBy(2);
 
-        final long periodInMillis = period.toMillis();
+        final Period period = properties.getPeriod();
+        final Duration initialDelay = period.getInitialDelay();
+        final Duration betweenRuns = period.getBetweenRuns();
+
         final long initialDelayInMillis = initialDelay.toMillis();
-        executor.scheduleAtFixedRate(this, initialDelayInMillis, periodInMillis, TimeUnit.MILLISECONDS);
+        final long betweenRunsInMillis = betweenRuns.toMillis();
+
+        executor.scheduleAtFixedRate(this, initialDelayInMillis, betweenRunsInMillis, TimeUnit.MILLISECONDS);
 
         final String prettyInitialDelay = CompactNumberFormatUtils.format(initialDelay);
-        final String prettyPeriod = CompactNumberFormatUtils.format(period);
+        final String prettyPeriod = CompactNumberFormatUtils.format(betweenRuns);
         logger.info(
                 "Autopilot scheduled. Will commence in {} with evaluation periods every {}.",
                 prettyInitialDelay,
@@ -432,10 +438,8 @@ public class DefaultAutopilot implements Autopilot {
     }
 
     @Override
-    public void shutdown() throws InterruptedException {
+    public void shutdown() {
         executor.shutdownNow();
-        final Duration timeout = properties.getTimeout();
-        @SuppressWarnings("unused")
-        final boolean termination = executor.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS);
     }
+
 }

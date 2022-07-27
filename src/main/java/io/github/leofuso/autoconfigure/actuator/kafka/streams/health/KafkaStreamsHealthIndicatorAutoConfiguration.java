@@ -20,8 +20,7 @@ import static io.github.leofuso.autoconfigure.actuator.kafka.streams.health.Kafk
 import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_BUILDER_BEAN_NAME;
 
 /**
- * {@link EnableAutoConfiguration Auto-configuration} for
- * {@link KafkaStreamsHealthIndicator KafkaStreamsHealthIndicator}.
+ * {@link EnableAutoConfiguration Auto-configuration} for {@link KafkaStreamsHealthIndicator}.
  */
 @AutoConfiguration(
         after = {KafkaStreamsDefaultConfiguration.class},
@@ -38,10 +37,13 @@ public class KafkaStreamsHealthIndicatorAutoConfiguration {
      */
     public static final String INDICATOR = "kstreams";
 
+    /**
+     * Properties file.
+     */
     private final KafkaStreamHealthIndicatorProperties properties;
 
     /**
-     * Creates a new {@link KafkaStreamsHealthIndicatorAutoConfiguration} instance.
+     * Creates a new KafkaStreamsHealthIndicatorAutoConfiguration instance.
      *
      * @param properties used to configure the {@link KafkaStreamsHealthIndicator indicator}.
      */

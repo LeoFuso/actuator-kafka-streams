@@ -1,10 +1,12 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
+import org.apache.kafka.streams.KafkaStreams.StateListener;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.endpoint.condition.ConditionalOnAvailableEndpoint;
 import org.springframework.boot.actuate.autoconfigure.health.ConditionalOnEnabledHealthIndicator;
 import org.springframework.boot.actuate.autoconfigure.health.HealthEndpointAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -17,7 +19,13 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotAutoConfiguration.INDICATOR;
 import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_BUILDER_BEAN_NAME;
 
-@AutoConfiguration(after = {KafkaStreamsDefaultConfiguration.class}, before = {HealthEndpointAutoConfiguration.class})
+/**
+ * {@link EnableAutoConfiguration Auto-configuration} for {@link Autopilot}.
+ */
+@AutoConfiguration(
+        after = {KafkaStreamsDefaultConfiguration.class},
+        before = {HealthEndpointAutoConfiguration.class}
+)
 @ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class})
 @ConditionalOnBean(value = {StreamsBuilderFactoryBean.class})
 @ConditionalOnEnabledHealthIndicator(INDICATOR)
@@ -32,13 +40,26 @@ public class AutopilotAutoConfiguration {
         this.properties = properties;
     }
 
-    @Bean(initMethod = "initialize", destroyMethod = "shutdown")
+    @Bean(
+            initMethod = "initialize",
+            destroyMethod = "shutdown"
+    )
     @DependsOn({DEFAULT_STREAMS_BUILDER_BEAN_NAME})
     @ConditionalOnMissingBean(Autopilot.class)
     public Autopilot autopilot(ObjectProvider<StreamsBuilderFactoryBean> provider) {
         final StreamsBuilderFactoryBean factory = provider.getIfAvailable();
         if (factory != null) {
             return new DefaultAutopilot(factory, properties);
+        }
+        return null;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public StateListener autopilotRecoveryWindow(ObjectProvider<Autopilot> provider) {
+        final Autopilot autopilot = provider.getIfAvailable();
+        if (autopilot != null) {
+            return autopilot.recoveryWindow();
         }
         return null;
     }

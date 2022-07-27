@@ -1,5 +1,6 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
 
@@ -9,6 +10,9 @@ import java.util.regex.Pattern;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+/**
+ * Configuration properties for {@link Autopilot}.
+ */
 @Validated
 @ConfigurationProperties(prefix = "management.health.autopilot")
 public class AutopilotConfigurationProperties {
@@ -23,30 +27,75 @@ public class AutopilotConfigurationProperties {
     );
 
     /**
-     * An upper bound of allowed StreamThreads running simultaneously.
+     * An upper bound of all StreamThreads the Autopilot can coordinate.
      */
     @NotNull
     @PositiveOrZero
     private Integer streamThreadLimit = 5;
 
     /**
-     * To trigger the creation or removal of new StreamThreads.
+     * To trigger the addition or removal of StreamThreads.
      */
     @NotNull
     @PositiveOrZero
     private Long lagThreshold = 20_000L;
 
     /**
-     * A period between Autopilot runs.
+     * Inner-properties exclusive to period related Autopilot behavior.
      */
+    @Valid
     @NotNull
-    private Duration period = Duration.ofMinutes(1);
+    private Period period = new Period();
+
 
     /**
-     * A general timeout required for Autopilot actions.
+     * Period configuration properties for Autopilot.
      */
-    @NotNull
-    private Duration timeout = Duration.ofMillis(600);
+    public static class Period {
+
+        /**
+         * A waiting period before the first Autopilot run.
+         */
+        @NotNull
+        private Duration initialDelay = Duration.ofSeconds(150);
+
+        /**
+         * A period between Autopilot runs.
+         */
+        @NotNull
+        private Duration betweenRuns = Duration.ofMinutes(5);
+
+        /**
+         * The period Autopilot will wait for the StreamThreads to stabilize.
+         */
+        @NotNull
+        private Duration recoveryWindow = Duration.ofMinutes(10);
+
+        public Duration getInitialDelay() {
+            return initialDelay;
+        }
+
+        public void setInitialDelay(final Duration initialDelay) {
+            this.initialDelay = initialDelay;
+        }
+
+        public Duration getBetweenRuns() {
+            return betweenRuns;
+        }
+
+        public void setBetweenRuns(final Duration betweenRuns) {
+            this.betweenRuns = betweenRuns;
+        }
+
+        public Duration getRecoveryWindow() {
+            return recoveryWindow;
+        }
+
+        public void setRecoveryWindow(final Duration recoveryWindow) {
+            this.recoveryWindow = recoveryWindow;
+        }
+    }
+
 
     public Pattern getExclusionPattern() {
         return exclusionPattern;
@@ -60,12 +109,8 @@ public class AutopilotConfigurationProperties {
         return lagThreshold;
     }
 
-    public Duration getPeriod() {
+    public Period getPeriod() {
         return period;
-    }
-
-    public Duration getTimeout() {
-        return timeout;
     }
 
     public void setExclusionPattern(final Pattern exclusionPattern) {
@@ -80,12 +125,7 @@ public class AutopilotConfigurationProperties {
         this.lagThreshold = lagThreshold;
     }
 
-    public void setPeriod(final Duration period) {
+    public void setPeriod(final Period period) {
         this.period = period;
     }
-
-    public void setTimeout(final Duration timeout) {
-        this.timeout = timeout;
-    }
-
 }
