@@ -38,7 +38,7 @@ public class AutopilotHealthIndicator extends AbstractHealthIndicator {
     private final Autopilot autopilot;
 
     /**
-     * Create a new {@link AutopilotHealthIndicator} instance.
+     * Create a new AutopilotHealthIndicator instance.
      *
      * @param autopilot to access the recorded lag.
      */
@@ -51,7 +51,7 @@ public class AutopilotHealthIndicator extends AbstractHealthIndicator {
         try {
 
             final ArrayList<Map<String, Object>> details = new ArrayList<>();
-            final Map<String, Map<TopicPartition, Long>> record = autopilot.threads();
+            final Map<String, Map<TopicPartition, Long>> record = autopilot.threadInfo();
             record.forEach(addDetails(details));
             builder.withDetail("threads", details);
 

@@ -1,22 +1,17 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
-import java.time.Clock;
+import javax.annotation.Nonnull;
+
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.streams.KafkaStreams;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactNumberFormatUtils;
-
-import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfigurationProperties.Period;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration.Period;
 
 /**
  * An {@link Autopilot} aims to avoid unnecessary horizontal auto-scale by first gathering the accumulated lag per
@@ -36,6 +31,7 @@ public interface Autopilot extends Runnable {
      * The expected state transitions with the following defined states is:
      *
      * <pre>
+     * {@code
      *
      *                       +<--------------+
      *                       |               |
@@ -65,7 +61,7 @@ public interface Autopilot extends Runnable {
      *      |        +-------+-------+   |   |
      *      +<-------| Decreasing (3)| --+---+
      *               +-------+-------+
-     *
+     * }
      * </pre>
      *
      * <ol>
@@ -140,14 +136,14 @@ public interface Autopilot extends Runnable {
     }
 
     /**
-     * Static factory for {@link RecoveryWindow} creations.
-     * @param properties used to build a new {@link RecoveryWindow} instance.
-     * @return a newly built {@link RecoveryWindow} instance.
+     * Static factory for {@link RecoveryWindowManager}.
+     * @param configuration used to configure the new {@link RecoveryWindowManager} instance.
+     * @return a newly built {@link RecoveryWindowManager} instance.
      */
-    static RecoveryWindow recoveryWindow(AutopilotConfigurationProperties properties) {
-        final Period period = properties.getPeriod();
+    static RecoveryWindowManager windowManager(AutopilotConfiguration configuration) {
+        final Period period = configuration.getPeriod();
         final Duration window = period.getRecoveryWindow();
-        return new RecoveryWindow(window);
+        return new RecoveryWindowManager(window);
     }
 
     /**
@@ -170,109 +166,38 @@ public interface Autopilot extends Runnable {
      * Invoke the creation of an additional
      * {@link org.apache.kafka.streams.processor.internals.StreamThread StreamThread}.
      */
-    void addStreamThread();
+    CompletableFuture<String> addStreamThread(Duration timeout);
 
     /**
      * Invoke the removal of a {@link org.apache.kafka.streams.processor.internals.StreamThread StreamThread}.
      */
-    void removeStreamThread();
+    CompletableFuture<String> removeStreamThread(Duration timeout);
 
     /**
-     * @return the current {@link State} of the Autopilot.
+     * @return the current {@link State state} of the Autopilot.
      */
     State state();
 
     /**
-     * @return the {@link RecoveryWindow} associated with this Autopilot.
-     */
-    RecoveryWindow recoveryWindow();
-
-    /**
-     * Fetches and updates the current thread and lag info, grouped by
+     * Fetches the most up-to-date thread info, by updating it first. All thread info is grouped by
      * {@link org.apache.kafka.streams.processor.internals.StreamThread StreamThread} name.
      *
-     * @return the current thread info, grouped by
+     * @return the most up-to-date thread info, grouped by
      * {@link org.apache.kafka.streams.processor.internals.StreamThread StreamThread} name.
      */
-    Map<String, Map<TopicPartition, Long>> threads();
+    Map<String, Map<TopicPartition, Long>> threadInfo();
 
     /**
-     * Initializes this instance.
+     * Automates this instance by initializing its {@link #run() run-loop} with a
+     * {@link RecoveryWindowManager window manager} capable of keeping KafkaStreams events.
+     *
+     * @param windowManager capable to react to KafkaStreams events.
      */
-    void initialize();
+    void automate(@Nonnull RecoveryWindowManager windowManager);
 
     /**
-     * Stops any running actions and closes this instance.
+     * Stops any running actions by closing its {@link java.util.concurrent.Executor executor service}.
      */
     void shutdown();
 
-    /**
-     * Will maintain a {@link Duration window} which a KafkaStreams App can recover from a high partition-lag value.
-     * This {@link Duration window} only opens after a successful StreamThread count update.
-     */
-    class RecoveryWindow implements KafkaStreams.StateListener {
-
-        /**
-         * {@link KafkaStreams.State State} stable enough to accept {@link Autopilot} actions.
-         */
-        public static final KafkaStreams.State STABLE_STATE = KafkaStreams.State.RUNNING;
-
-        private static final Logger logger = LoggerFactory.getLogger(RecoveryWindow.class);
-
-        /**
-         * Used to keep time between two {@link RecoveryWindow#STABLE_STATE stable} states.
-         */
-        private final Clock clock = Clock.systemUTC();
-
-        /**
-         * The point-in-time marking the last recorded {@link RecoveryWindow#STABLE_STATE stable} state.
-         */
-        private final Instant timestamp = Instant.EPOCH;
-
-        /**
-         * A {@link Duration period} of stability to maintain between each transition.
-         */
-        private final Duration window;
-
-        /**
-         * Constructs a RecoveryWindow instance, starting its internal clock.
-         *
-         * @param window A {@link Duration period} of stability to maintain between each transition.
-         */
-        RecoveryWindow(Duration window) {
-            this.window = Objects.requireNonNull(window, "Duration [window] is required.");
-        }
-
-        @Override
-        public void onChange(KafkaStreams.State newState, KafkaStreams.State oldState) {
-            if (newState == STABLE_STATE) {
-                final Instant timestamp = Instant.now(clock);
-                this.timestamp.with(timestamp);
-                logger.debug("KafkaStreams has reached a stable state, timeout clock is ticking.");
-            }
-        }
-
-        /**
-         * @return either or not the recovery window has closed.
-         */
-        boolean hasClosed() {
-
-            final Instant checkpoint = Instant.now(clock);
-            final Duration elapsed = Duration.between(timestamp, checkpoint);
-
-            final boolean isClosed = elapsed.compareTo(window) >= 0;
-            if (!isClosed) {
-                final Duration remaining = window.minus(elapsed);
-                final String prettyWindow = CompactNumberFormatUtils.format(window);
-                final String prettyRemaining = CompactNumberFormatUtils.format(remaining);
-                logger.info(
-                        "Autopilot [NOOP]. A recovery window of {} is in place, and will remain open for another {}.",
-                        prettyWindow,
-                        prettyRemaining
-                );
-                return false;
-            }
-            return true;
-        }
-    }
 }

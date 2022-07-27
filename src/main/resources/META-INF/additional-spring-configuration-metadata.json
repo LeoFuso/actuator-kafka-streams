@@ -4,13 +4,13 @@
     {
       "name": "management.health.kstreams.enabled",
       "type": "java.lang.Boolean",
-      "description": "Whether to enable Cassandra health check.",
+      "description": "Whether to enable KafkaStreams health check.",
       "defaultValue": false
     },
     {
       "name": "management.health.autopilot.enabled",
       "type": "java.lang.Boolean",
-      "description": "Whether to enable database health check.",
+      "description": "Whether to authorize Autopilot to increase the StreamThread count automatically.",
       "defaultValue": false
     }
   ],

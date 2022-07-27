@@ -2,6 +2,7 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
@@ -17,8 +18,12 @@ public class StateStoreRestoreEndpoint {
 
     private final StateStoreRestoreRepository repository;
 
+    /**
+     * Constructs a new StateStoreRestoreEndpoint instance.
+     * @param repository to delegate the queries to.
+     */
     public StateStoreRestoreEndpoint(final StateStoreRestoreRepository repository) {
-        this.repository = repository;
+        this.repository = Objects.requireNonNull(repository, "StateStoreRestoreRepository [repository] is required.");
     }
 
     /**
@@ -30,8 +35,10 @@ public class StateStoreRestoreEndpoint {
     }
 
     /**
-     * @param storeName {@link org.apache.kafka.streams.processor.StateStore StateStore} name to query for restoration states.
-     * @return all available {@link org.apache.kafka.streams.processor.StateStore StateStore} restoration states, if any.
+     * @param storeName {@link org.apache.kafka.streams.processor.StateStore StateStore} name to query for restoration
+     *                  states.
+     * @return all available {@link org.apache.kafka.streams.processor.StateStore StateStore} restoration states, if
+     * any.
      */
     @ReadOperation
     public Map<String, Object> findByStoreName(@Selector(match = ALL_REMAINING) String storeName) {

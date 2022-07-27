@@ -13,8 +13,6 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpoint;
-
 import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_BUILDER_BEAN_NAME;
 
 /**
@@ -25,6 +23,12 @@ import static org.springframework.kafka.annotation.KafkaStreamsDefaultConfigurat
 @ConditionalOnBean(value = {StreamsBuilderFactoryBean.class})
 public class RestartEndpointAutoConfiguration {
 
+    /**
+     * Main bean factory for the {@link RestartEndpoint}.
+     *
+     * @param provider used to create a {@link RestartEndpoint}.
+     * @return a new {@link RestartEndpoint}.
+     */
     @Bean
     @DependsOn({DEFAULT_STREAMS_BUILDER_BEAN_NAME})
     @ConditionalOnAvailableEndpoint

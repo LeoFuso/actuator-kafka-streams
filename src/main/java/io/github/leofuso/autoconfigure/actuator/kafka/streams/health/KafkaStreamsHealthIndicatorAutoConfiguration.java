@@ -54,14 +54,14 @@ public class KafkaStreamsHealthIndicatorAutoConfiguration {
     /**
      * Main bean factory for the {@link KafkaStreamsHealthIndicator}.
      *
-     * @param factoryProvider used to create a {@link KafkaStreamsHealthIndicator}.
+     * @param provider used to create a {@link KafkaStreamsHealthIndicator}.
      * @return a new {@link KafkaStreamsHealthIndicator}.
      */
     @Bean
     @DependsOn({DEFAULT_STREAMS_BUILDER_BEAN_NAME})
     @ConditionalOnMissingBean(name = "kstreamsHealthIndicator")
-    public KafkaStreamsHealthIndicator kstreamsHealthIndicator(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider) {
-        final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
+    public KafkaStreamsHealthIndicator kstreamsHealthIndicator(ObjectProvider<StreamsBuilderFactoryBean> provider) {
+        final StreamsBuilderFactoryBean factory = provider.getIfAvailable();
         if (factory != null) {
             return new KafkaStreamsHealthIndicator(
                     factory,

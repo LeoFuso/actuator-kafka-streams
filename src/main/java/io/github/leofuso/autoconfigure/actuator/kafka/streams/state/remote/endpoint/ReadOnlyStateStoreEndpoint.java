@@ -3,6 +3,7 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endp
 import javax.annotation.Nullable;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -31,8 +32,12 @@ public class ReadOnlyStateStoreEndpoint {
 
     private final RemoteQuerySupport support;
 
+    /**
+     * Constructs a new ReadOnlyStateStoreEndpoint instance.
+     * @param support to delegate the queries to.
+     */
     public ReadOnlyStateStoreEndpoint(final RemoteQuerySupport support) {
-        this.support = support;
+        this.support = Objects.requireNonNull(support, "RemoteQuerySupport [support] is required.");
     }
 
 

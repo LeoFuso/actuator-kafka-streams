@@ -6,6 +6,9 @@ import org.apache.kafka.streams.state.QueryableStoreType;
 
 import io.grpc.ManagedChannelBuilder;
 
+/**
+ * The stub responsible for all gRPC {@link RemoteStateStore store} invocations.
+ */
 public interface RemoteStateStoreStub extends RemoteStateStore {
 
     @Override
@@ -14,21 +17,20 @@ public interface RemoteStateStoreStub extends RemoteStateStore {
     }
 
     /**
-     * Customizes this {@link RemoteStateStoreStub instance}.
-     * @param configuration available customization to be applied to this {@link RemoteStateStoreStub instance}.
+     * Customizes this instance.
+     * @param configuration available customization to be applied to this instance.
      */
     void configure(Function<ManagedChannelBuilder<?>, ManagedChannelBuilder<?>> configuration);
 
     /**
-     * Initializes this {@link RemoteStateStoreStub stub}. Should be invoked before made available to receive
+     * Initializes this stub. Should be invoked before made available to receive
      * actual requests, and after all configurations were applied.
      */
     void initialize();
 
-
     /**
      * Starts a shutdown process for the {@link io.grpc.Channel channel} associated with this
-     * {@link RemoteStateStoreStub stub}.
+     * stub.
      */
     void shutdown();
 

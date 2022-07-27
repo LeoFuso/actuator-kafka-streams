@@ -61,10 +61,10 @@ public class KeyValueStateStoreStub implements RemoteKeyValueStateStore, RemoteS
     private HostInfo host;
 
     /**
-     * Constructs a new {@link KeyValueStateStoreStub stub} instance to carry out the method invocations that a
+     * Constructs a new stub instance to carry out the method invocations that a
      * {@link RemoteKeyValueStateStore} can receive.
      * <p>
-     * To be properly utilized, this {@link KeyValueStateStoreStub stub} instance needs to be
+     * To be properly utilized, this stub instance needs to be
      * {@link RemoteStateStoreStub#initialize() initialized} first.
      *
      * @param builder that can be further configured via {@link RemoteStateStoreStub#configure(Function) configure}
@@ -133,8 +133,7 @@ public class KeyValueStateStoreStub implements RemoteKeyValueStateStore, RemoteS
         if (!initialized) {
             throw new IllegalStateException("You can't invoke a shutdown before the stub initialization.");
         }
-        if (stub != null && stub.getChannel() instanceof ManagedChannel) {
-            final ManagedChannel channel = (ManagedChannel) stub.getChannel();
+        if (stub != null && stub.getChannel() instanceof ManagedChannel channel) {
             channel.shutdown();
         }
     }

@@ -11,11 +11,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Configuration properties for {@link Autopilot}.
+ * Configuration properties for Autopilot.
  */
 @Validated
 @ConfigurationProperties(prefix = "management.health.autopilot")
-public class AutopilotConfigurationProperties {
+public class AutopilotConfiguration {
 
     /**
      * Excludes topics from the lag calculation matching the specified pattern.
@@ -31,7 +31,7 @@ public class AutopilotConfigurationProperties {
      */
     @NotNull
     @PositiveOrZero
-    private Integer streamThreadLimit = 5;
+    private Integer streamThreadLimit = 0;
 
     /**
      * To trigger the addition or removal of StreamThreads.

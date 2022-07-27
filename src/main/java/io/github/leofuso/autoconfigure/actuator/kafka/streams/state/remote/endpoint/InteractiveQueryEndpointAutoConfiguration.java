@@ -7,6 +7,7 @@ import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfi
 import org.springframework.boot.actuate.autoconfigure.endpoint.condition.ConditionalOnAvailableEndpoint;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -18,6 +19,7 @@ import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
 import com.google.protobuf.Service;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.CompositeStateAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.DefaultHostManager;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.DefaultRemoteQuerySupport;
@@ -37,6 +39,9 @@ import static java.util.Optional.ofNullable;
 import static org.apache.kafka.streams.StreamsConfig.APPLICATION_SERVER_CONFIG;
 
 
+/**
+ * {@link EnableAutoConfiguration Auto-configuration} for all interactive queries functionality.
+ */
 @AutoConfiguration(
         before = {CompositeStateAutoConfiguration.class},
         after = {EndpointAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class}
