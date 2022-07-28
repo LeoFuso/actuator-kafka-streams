@@ -10,11 +10,6 @@ import org.springframework.boot.autoconfigure.kafka.StreamsBuilderFactoryBeanCus
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.CompositeStateListener;
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.DefaultCompositeStateListener;
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.CompositeStateRestoreListener;
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.DefaultCompositeStateRestoreListener;
-
 import static org.apache.kafka.streams.KafkaStreams.StateListener;
 
 /**
@@ -28,24 +23,13 @@ public class CompositeStateAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(CompositeStateListener.class)
     public CompositeStateListener stateListener(ObjectProvider<StateListener> provider) {
-        final StateListener unique = provider.getIfUnique();
-        final StateListener available = provider.getIfAvailable();
-        if (unique != null && available != null) {
-            /* No need for a composite with only one element. */
-            return null;
-        }
-        return new DefaultCompositeStateListener(provider.orderedStream());
+        return new DefaultCompositeStateListener(provider);
     }
 
     @Bean
     @ConditionalOnMissingBean(CompositeStateRestoreListener.class)
     public CompositeStateRestoreListener stateRestoreListener(ObjectProvider<StateRestoreListener> provider) {
-        final StateRestoreListener unique = provider.getIfUnique();
-        if (unique != null) {
-            /* No need for a composite with only one element. */
-            return null;
-        }
-        return new DefaultCompositeStateRestoreListener(provider.orderedStream());
+        return new DefaultCompositeStateRestoreListener(provider);
     }
 
     @Bean

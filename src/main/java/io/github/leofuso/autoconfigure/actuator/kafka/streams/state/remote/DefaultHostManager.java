@@ -1,5 +1,6 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplier;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.GrpcChannelConfigurer;
 
 
@@ -30,28 +32,28 @@ public class DefaultHostManager implements HostManager {
 
     private final ConcurrentHashMap<HostInfo, RemoteStateStore> stores;
 
-    private final StreamsBuilderFactoryBean factory;
+    private final KStreamsSupplier kStreamsSupplier;
 
     private final Set<RemoteStateStore> supported;
 
-    private final Set<GrpcChannelConfigurer> configuration;
+    private final List<GrpcChannelConfigurer> configuration;
 
-    public DefaultHostManager(StreamsBuilderFactoryBean factory,
-                              Stream<RemoteStateStore> supported,
-                              Stream<GrpcChannelConfigurer> configuration) {
-        this.factory = Objects.requireNonNull(factory, "StreamsBuilderFactoryBean [factory] is required.");
+    /**
+     * Constructs a new {@link HostManager} instance.
+     * @param supplier as a holder of a {@link KafkaStreams} instance.
+     * @param supported all {@link RemoteStateStore} associated with it.
+     * @param configuration that is applied to every managed {@link java.nio.channels.Channel channel}.
+     */
+    public DefaultHostManager(KStreamsSupplier supplier, Stream<RemoteStateStore> supported, Stream<GrpcChannelConfigurer> configuration) {
+        this.kStreamsSupplier = Objects.requireNonNull(supplier, "KStreamsSupplier [supplier] is required.");
         this.supported = supported.collect(Collectors.toSet());
-        this.configuration = configuration.collect(Collectors.toSet());
+        this.configuration = configuration.toList();
         this.stores = new ConcurrentHashMap<>();
     }
 
     @Override
     public <K> Optional<HostInfo> findHost(final K key, final Serializer<K> serializer, final String storeName) {
-        final KafkaStreams streams = factory.getKafkaStreams();
-        if (streams == null) {
-            throw new StreamsNotStartedException("KafkaStreams [factory.kafkaStreams] must be available.");
-        }
-
+        final KafkaStreams streams = kStreamsSupplier.getOrThrows();
         final KeyQueryMetadata metadata = streams.queryMetadataForKey(storeName, key, serializer);
         final boolean notAvailable = metadata.equals(KeyQueryMetadata.NOT_AVAILABLE);
         if (notAvailable) {
@@ -95,8 +97,7 @@ public class DefaultHostManager implements HostManager {
 
             final R remote = supported.stub(host);
             final String ref = remote.reference();
-            if (remote instanceof RemoteStateStoreStub) {
-                final RemoteStateStoreStub stub = (RemoteStateStoreStub) remote;
+            if (remote instanceof RemoteStateStoreStub stub) {
                 configuration.forEach(config -> stub.configure(config::configure));
                 logger.info("Initializing a new host[{}:{}] with ref[{}]", host.host(), host.port(), ref);
                 stub.initialize();
@@ -115,8 +116,7 @@ public class DefaultHostManager implements HostManager {
         logger.info("Starting HostManager clean-up, gRPC services may be temporally unavailable.");
         for (Map.Entry<HostInfo, RemoteStateStore> entry : stores.entrySet()) {
             final RemoteStateStore store = entry.getValue();
-            if (store instanceof RemoteStateStoreStub) {
-                final RemoteStateStoreStub stub = (RemoteStateStoreStub) store;
+            if (store instanceof RemoteStateStoreStub stub) {
                 stub.shutdown();
             }
             final HostInfo host = entry.getKey();

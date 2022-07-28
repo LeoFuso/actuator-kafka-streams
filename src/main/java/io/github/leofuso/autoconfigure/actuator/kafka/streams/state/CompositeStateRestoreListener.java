@@ -1,4 +1,4 @@
-package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore;
+package io.github.leofuso.autoconfigure.actuator.kafka.streams.state;
 
 import org.apache.kafka.streams.processor.StateRestoreListener;
 

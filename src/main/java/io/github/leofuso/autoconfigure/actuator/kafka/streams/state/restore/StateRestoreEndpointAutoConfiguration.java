@@ -14,10 +14,15 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.CompositeStateAutoConfiguration;
+
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for {@link StateRestoreListener} feature and its endpoint.
  */
-@AutoConfiguration(after = {EndpointAutoConfiguration.class})
+@AutoConfiguration(
+        before = {CompositeStateAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class},
+        after = {EndpointAutoConfiguration.class}
+)
 @ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class, Endpoint.class})
 @ConditionalOnAvailableEndpoint(endpoint = StateStoreRestoreEndpoint.class)
 public class StateRestoreEndpointAutoConfiguration {
@@ -52,3 +57,4 @@ public class StateRestoreEndpointAutoConfiguration {
     }
 
 }
+

@@ -7,12 +7,12 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.errors.StreamsNotStartedException;
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.QueryableStoreType;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.apache.kafka.streams.state.ValueAndTimestamp;
-import org.springframework.kafka.config.StreamsBuilderFactoryBean;
+
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplier;
 
 import static org.apache.kafka.streams.StoreQueryParameters.fromNameAndType;
 import static org.apache.kafka.streams.state.QueryableStoreTypes.keyValueStore;
@@ -24,20 +24,22 @@ import static org.apache.kafka.streams.state.QueryableStoreTypes.timestampedKeyV
  */
 public class LocalKeyValueStore implements RemoteKeyValueStateStore {
 
-    private final StreamsBuilderFactoryBean factory;
+    private final KStreamsSupplier kStreamsSupplier;
     private final HostInfo self;
 
     /**
-     * Creates a new instance of this {@link RemoteKeyValueStateStore store}. Will throw a {@link NullPointerException}
-     * if missing required configurations, including the ability to create a {@link HostInfo host}, necessary to expose
-     * this {@link RemoteKeyValueStateStore store} to the {@link io.grpc.Server server}.
+     * Creates a new instance of this {@link RemoteKeyValueStateStore store}. Will throw an
+     * {@link IllegalStateException} if missing required configurations, including the ability to create a
+     * {@link HostInfo host}, necessary to expose this {@link RemoteKeyValueStateStore store} to the
+     * {@link io.grpc.Server server}.
      *
-     * @param factory used to extract the necessary configurations to a new instance.
+     * @param supplier used to extract the necessary configurations and provide access to a running
+     *                 {@link KafkaStreams}.
      */
-    public LocalKeyValueStore(final StreamsBuilderFactoryBean factory) {
-        this.factory = Objects.requireNonNull(factory, "StreamsBuilderFactoryBean [factory] is required.");
-        this.self = Optional.of(factory)
-                            .map(StreamsBuilderFactoryBean::getStreamsConfiguration)
+    public LocalKeyValueStore(final KStreamsSupplier supplier) {
+        this.kStreamsSupplier = Objects.requireNonNull(supplier, "KStreamsSupplier [supplier] is required.");
+        this.self = Optional.of(this.kStreamsSupplier)
+                            .map(KStreamsSupplier::configAsProperties)
                             .map(StreamsConfig::new)
                             .map(config -> config.getString(StreamsConfig.APPLICATION_SERVER_CONFIG))
                             .map(HostInfo::buildFromEndpoint)
@@ -53,10 +55,7 @@ public class LocalKeyValueStore implements RemoteKeyValueStateStore {
 
     @Override
     public <K, V> CompletableFuture<V> findOne(final K key, final String storeName) {
-        final KafkaStreams streams = factory.getKafkaStreams();
-        if (streams == null) {
-            throw new StreamsNotStartedException("KafkaStreams [factory.kafkaStreams] must be available.");
-        }
+        final KafkaStreams streams = kStreamsSupplier.getOrThrows();
 
         final QueryableStoreType<ReadOnlyKeyValueStore<K, V>> type = keyValueStore();
         final StoreQueryParameters<ReadOnlyKeyValueStore<K, V>> parameters = fromNameAndType(storeName, type);
@@ -68,11 +67,7 @@ public class LocalKeyValueStore implements RemoteKeyValueStateStore {
 
     @Override
     public <K, V> CompletableFuture<ValueAndTimestamp<V>> findOneTimestamped(final K key, final String storeName) {
-        final KafkaStreams streams = factory.getKafkaStreams();
-        if (streams == null) {
-            throw new StreamsNotStartedException("KafkaStreams [factory.kafkaStreams] must be available.");
-        }
-
+        final KafkaStreams streams = kStreamsSupplier.getOrThrows();
         final QueryableStoreType<ReadOnlyKeyValueStore<K, ValueAndTimestamp<V>>> type = timestampedKeyValueStore();
         final StoreQueryParameters<ReadOnlyKeyValueStore<K, ValueAndTimestamp<V>>> parameters =
                 fromNameAndType(storeName, type);
@@ -93,10 +88,9 @@ public class LocalKeyValueStore implements RemoteKeyValueStateStore {
         if (this == other) {
             return true;
         }
-        if (!(other instanceof LocalKeyValueStore)) {
+        if (!(other instanceof LocalKeyValueStore that)) {
             return false;
         }
-        final LocalKeyValueStore that = (LocalKeyValueStore) other;
         return reference().equals(that.reference());
     }
 }

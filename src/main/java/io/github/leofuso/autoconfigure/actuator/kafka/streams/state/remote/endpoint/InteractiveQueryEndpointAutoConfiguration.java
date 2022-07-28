@@ -1,5 +1,8 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint;
 
+import java.util.Objects;
+
+import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.state.HostInfo;
 import org.springframework.beans.factory.ObjectProvider;
@@ -15,11 +18,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
-import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
 import com.google.protobuf.Service;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplier;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplierAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.CompositeStateAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.DefaultHostManager;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.DefaultRemoteQuerySupport;
@@ -43,13 +46,22 @@ import static org.apache.kafka.streams.StreamsConfig.APPLICATION_SERVER_CONFIG;
  * {@link EnableAutoConfiguration Auto-configuration} for all interactive queries functionality.
  */
 @AutoConfiguration(
-        before = {CompositeStateAutoConfiguration.class},
-        after = {EndpointAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class}
+        before = {CompositeStateAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class},
+        after = {EndpointAutoConfiguration.class, KStreamsSupplierAutoConfiguration.class}
 )
 @ConditionalOnClass({Server.class, Service.class, StreamObserver.class, Endpoint.class})
-@ConditionalOnBean({StreamsBuilderFactoryBean.class})
+@ConditionalOnBean({KStreamsSupplier.class})
 @ConditionalOnProperty(prefix = "spring.kafka", name = {"streams.properties." + APPLICATION_SERVER_CONFIG})
 public class InteractiveQueryEndpointAutoConfiguration {
+
+    /**
+     * A naive supplier of {@link org.apache.kafka.streams.KafkaStreams KafkaStreams}.
+     */
+    private final KStreamsSupplier streamsSupplier;
+
+    public InteractiveQueryEndpointAutoConfiguration(final KStreamsSupplier streamsSupplier) {
+        this.streamsSupplier = Objects.requireNonNull(streamsSupplier, "KStreamsSupplier [supplier] is required.");
+    }
 
     @Bean
     @ConditionalOnMissingBean(GrpcChannelConfigurer.class)
@@ -60,30 +72,20 @@ public class InteractiveQueryEndpointAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(LocalKeyValueStore.class)
     @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
-    public RemoteStateStore remoteKeyValueStateStore(ObjectProvider<StreamsBuilderFactoryBean> provider) {
-        final StreamsBuilderFactoryBean factory = provider.getIfAvailable();
-        if (factory != null) {
-            return new LocalKeyValueStore(factory);
-        }
-        return null;
+    public RemoteStateStore remoteKeyValueStateStore() {
+        return new LocalKeyValueStore(streamsSupplier);
     }
 
     @Bean(destroyMethod = "cleanUp")
     @ConditionalOnMissingBean(HostManager.class)
-    public HostManager hostManager(ObjectProvider<StreamsBuilderFactoryBean> provider,
-                                   ObjectProvider<RemoteStateStore> stores,
+    public HostManager hostManager(ObjectProvider<RemoteStateStore> stores,
                                    ObjectProvider<GrpcChannelConfigurer> configurers) {
-
-        final StreamsBuilderFactoryBean factory = provider.getIfAvailable();
-        if (factory != null) {
-            return new DefaultHostManager(factory, stores.orderedStream(), configurers.orderedStream());
-        }
-        return null;
+        return new DefaultHostManager(streamsSupplier, stores.orderedStream(), configurers.orderedStream());
     }
 
     @Bean
     @ConditionalOnMissingBean(HostManager.CleanUpListener.class)
-    public HostManager.CleanUpListener hostManagerCleanUpListener(ObjectProvider<HostManager> provider) {
+    public KafkaStreams.StateListener hostManagerCleanUpListener(ObjectProvider<HostManager> provider) {
         final HostManager manager = provider.getIfAvailable();
         if (manager != null) {
             return new HostManager.CleanUpListener(manager);
@@ -98,16 +100,13 @@ public class InteractiveQueryEndpointAutoConfiguration {
     )
     @ConditionalOnMissingBean
     @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
-    public Server gRpcStateStoreServer(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
-                                       ObjectProvider<GrpcServerConfigurer> configurers,
-                                       ObjectProvider<HostManager> managerProvider) {
+    public Server gRpcStateStoreServer(ObjectProvider<GrpcServerConfigurer> configurers,
+                                       ObjectProvider<HostManager> provider) {
 
-        final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
-        final HostManager manager = managerProvider.getIfAvailable();
+        final HostManager manager = provider.getIfAvailable();
 
-        return ofNullable(factory)
-                .filter(f -> manager != null)
-                .map(StreamsBuilderFactoryBean::getStreamsConfiguration)
+        return ofNullable(manager)
+                .map(m -> streamsSupplier.configAsProperties())
                 .map(StreamsConfig::new)
                 .map(config -> config.getString(StreamsConfig.APPLICATION_SERVER_CONFIG))
                 .map(HostInfo::buildFromEndpoint)
@@ -135,16 +134,14 @@ public class InteractiveQueryEndpointAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(RemoteQuerySupport.class)
-    public RemoteQuerySupport remoteQuerySupport(ObjectProvider<StreamsBuilderFactoryBean> factoryProvider,
-                                                 ObjectProvider<HostManager> managerProvider,
+    public RemoteQuerySupport remoteQuerySupport(ObjectProvider<HostManager> managerProvider,
                                                  ObjectProvider<ConversionService> converterProvider) {
 
-        final StreamsBuilderFactoryBean factory = factoryProvider.getIfAvailable();
         final HostManager manager = managerProvider.getIfAvailable();
         final ConversionService converter = converterProvider.getIfAvailable();
 
-        if (factory != null && manager != null && converter != null) {
-            return new DefaultRemoteQuerySupport(manager, converter, factory.getStreamsConfiguration());
+        if (manager != null && converter != null) {
+            return new DefaultRemoteQuerySupport(manager, converter, streamsSupplier.configAsProperties());
         }
 
         return null;
