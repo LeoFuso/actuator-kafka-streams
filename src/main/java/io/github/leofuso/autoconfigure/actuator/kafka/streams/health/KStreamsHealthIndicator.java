@@ -160,7 +160,7 @@ public class KStreamsHealthIndicator extends AbstractHealthIndicator {
     private List<Map<String, Object>> taskDetails(Set<TaskMetadata> taskMetadata) {
         return taskMetadata.stream()
                            .map(metadata -> Map.of(
-                                   "taskId", metadata.taskId(),
+                                   "taskId", "%s".formatted(metadata.taskId()),
                                    "partitions", addPartitionsInfo(metadata)
                            ))
                            .sorted(Comparator.comparing(map -> (String) map.get("taskId")))

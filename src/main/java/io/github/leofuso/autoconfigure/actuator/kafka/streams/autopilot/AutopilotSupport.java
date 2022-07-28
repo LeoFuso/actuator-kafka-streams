@@ -17,7 +17,7 @@ import static org.apache.kafka.streams.KafkaStreams.StateListener;
 /**
  * Provides access to a reliable {@link Autopilot} instance by managing its lifecycle.
  */
-public class AutopilotSupport {
+public class AutopilotSupport implements StreamsBuilderFactoryBeanCustomizer {
 
     private final StreamLifecycleHook hook = new StreamLifecycleHook();
 
@@ -43,20 +43,14 @@ public class AutopilotSupport {
 
     /**
      * If an {@link Autopilot} instance is available, invoke this action onto it.
+     *
      * @param action to be invoked on to.
-     * @param <T> the action return type.
+     * @param <T>    the action return type.
      * @return the action result, if any.
      */
     public <T> Optional<T> invoke(Function<Autopilot, T> action) {
         final Optional<Autopilot> instance = hook.instance();
         return instance.map(action);
-    }
-
-    /**
-     * @return a customizer to tap into the {@link KafkaStreams} lifecycle.
-     */
-    public StreamsBuilderFactoryBeanCustomizer lifecycleHook() {
-        return factory -> factory.addListener(hook);
     }
 
     /**
@@ -66,6 +60,11 @@ public class AutopilotSupport {
         return Optional.ofNullable(windowManager)
                        .map(RecoveryWindowManager::hookSupplier)
                        .map(Supplier::get);
+    }
+
+    @Override
+    public void customize(final StreamsBuilderFactoryBean factoryBean) {
+        factoryBean.addListener(hook);
     }
 
 

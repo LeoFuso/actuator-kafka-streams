@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.SmartInitializingSingleton;
+import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
 import static org.apache.kafka.streams.KafkaStreams.State;
 import static org.apache.kafka.streams.KafkaStreams.StateListener;
@@ -52,5 +53,10 @@ public class DefaultCompositeStateListener implements CompositeStateListener, Sm
                 logger.debug("An instance of [{}] is listening on KafkaStreams events.", name);
             });
         }
+    }
+
+    @Override
+    public void customize(final StreamsBuilderFactoryBean factoryBean) {
+        factoryBean.setStateListener(this);
     }
 }

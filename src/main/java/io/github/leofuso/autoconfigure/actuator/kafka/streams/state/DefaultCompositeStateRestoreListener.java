@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.SmartInitializingSingleton;
+import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
 /**
  * Default implementation of {@link CompositeStateRestoreListener composite listener}.
@@ -56,6 +57,11 @@ public class DefaultCompositeStateRestoreListener implements CompositeStateResto
                 logger.debug("An instance of [{}] is listening on StateRestore events.", name);
             });
         }
+    }
+
+    @Override
+    public void customize(final StreamsBuilderFactoryBean factoryBean) {
+        factoryBean.setStateRestoreListener(this);
     }
 }
 

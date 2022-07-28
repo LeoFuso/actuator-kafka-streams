@@ -9,7 +9,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.kafka.StreamsBuilderFactoryBeanCustomizer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
@@ -55,16 +54,6 @@ public class AutopilotAutoConfiguration {
         if (support != null) {
             final Optional<StateListener> listener = support.automationHook();
             return listener.orElse(null);
-        }
-        return null;
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public StreamsBuilderFactoryBeanCustomizer autopilotSupportLifecycleHook(ObjectProvider<AutopilotSupport> provider) {
-        final AutopilotSupport support = provider.getIfAvailable();
-        if (support != null) {
-            return support.lifecycleHook();
         }
         return null;
     }

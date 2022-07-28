@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -61,7 +62,7 @@ public class DefaultAutopilot implements Autopilot {
     /**
      * Stores the most recent lag info.
      */
-    private final Map<String, Map<TopicPartition, Long>> threadInfo = new HashMap<>();
+    private final Map<String, Map<TopicPartition, Long>> threadInfo = new ConcurrentHashMap<>();
 
     /**
      * As long as the target is above or bellow the {@link DefaultAutopilot#desiredThreadCount}, an action must be
@@ -195,15 +196,16 @@ public class DefaultAutopilot implements Autopilot {
 
         final State nextState = decideNextState();
         return switch (nextState) {
-            case STAND_BY, BOOSTED -> CompletableFuture.completedFuture(state);
+            case STAND_BY, BOOSTED -> {
+                    state = nextState;
+                yield CompletableFuture.completedFuture(state);
+            }
             case BOOSTING -> {
-                state = State.BOOSTING;
                 logger.info("Autopilot is [{}] the StreamThread count.", state);
                 yield doAddStreamThread()
                         .thenApply(thread -> state);
             }
             case DECREASING -> {
-                state = State.DECREASING;
                 logger.info("Autopilot is [{}] the StreamThread count.", state);
                 yield doRemoveStreamThread()
                         .thenApply(thread -> state);
@@ -224,7 +226,7 @@ public class DefaultAutopilot implements Autopilot {
                 .reduce(Long::sum)
                 .orElse(0L);
 
-        final long average = accumulatedLag / threadCount;
+        final long average = accumulatedLag / (threadCount == 0 ? 1 : threadCount);
         logger.info("Autopilot found an average partition-lag of {}", numberFormat.format(average));
 
         final int threadLimit = desiredThreadCount + config.getStreamThreadLimit();
@@ -258,7 +260,7 @@ public class DefaultAutopilot implements Autopilot {
 
     @Override
     public CompletableFuture<String> addStreamThread(final Duration timeout) {
-        if (state != State.BOOSTED && state != State.STAND_BY) {
+        if (state.isValidTransition(State.BOOSTING)) {
             final String message = "Autopilot [NOOP]. Cannot manually transition from [%s] to [%s].".formatted(
                     state,
                     State.BOOSTING
@@ -288,6 +290,7 @@ public class DefaultAutopilot implements Autopilot {
     }
 
     private CompletableFuture<String> doAddStreamThread() {
+        state = State.BOOSTING;
         return supplyAsync(streams::addStreamThread)
                 .handleAsync((result, throwable) -> {
 
@@ -317,10 +320,10 @@ public class DefaultAutopilot implements Autopilot {
 
     @Override
     public CompletableFuture<String> removeStreamThread(final Duration timeout) {
-        if (state != State.BOOSTED) {
+        if (state.isValidTransition(State.DECREASING)) {
             final String message = "Autopilot [NOOP]. Cannot manually transition from [%s] to [%s].".formatted(
                     state,
-                    State.BOOSTING
+                    State.DECREASING
             );
             final IllegalStateException ex = new IllegalStateException(message);
             return CompletableFuture.failedFuture(ex);
@@ -347,6 +350,7 @@ public class DefaultAutopilot implements Autopilot {
     }
 
     private CompletableFuture<String> doRemoveStreamThread() {
+        state = State.DECREASING;
         return supplyAsync(streams::removeStreamThread)
                 .handleAsync((result, throwable) -> {
 
@@ -427,8 +431,10 @@ public class DefaultAutopilot implements Autopilot {
         final Set<String> managedThreads = threadInfo.keySet();
         final Set<String> updatedThreads = threads.keySet();
 
-        Sets.difference(managedThreads, updatedThreads)
-            .forEach(threadInfo::remove);
+        final Sets.SetView<String> difference = Sets.difference(managedThreads, updatedThreads);
+        for (String threadName : difference) {
+            threadInfo.compute(threadName, (k, v) -> null);
+        }
 
         threadInfo.putAll(threads);
 
