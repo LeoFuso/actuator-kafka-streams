@@ -165,11 +165,17 @@ public interface Autopilot extends Runnable {
     /**
      * Invoke the creation of an additional
      * {@link org.apache.kafka.streams.processor.internals.StreamThread StreamThread}.
+     *
+     * @param timeout to finish the operation.
+     * @return a {@link CompletableFuture} containing the created thread name, or nothing, exceptionally.
      */
     CompletableFuture<String> addStreamThread(Duration timeout);
 
     /**
      * Invoke the removal of a {@link org.apache.kafka.streams.processor.internals.StreamThread StreamThread}.
+     *
+     * @param timeout to finish the operation.
+     * @return a {@link CompletableFuture} containing the removed thread name, or nothing, exceptionally.
      */
     CompletableFuture<String> removeStreamThread(Duration timeout);
 

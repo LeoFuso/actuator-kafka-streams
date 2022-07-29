@@ -22,19 +22,18 @@ public class AutopilotConfiguration {
      */
     @NotNull
     private Pattern exclusionPattern = Pattern.compile(
-            ".*(-changelog|subscription-registration-topic|-subscription-response-topic)$",
-            Pattern.CASE_INSENSITIVE
+            "(?i).*(-changelog|subscription-registration-topic|-subscription-response-topic)$"
     );
 
     /**
-     * An upper bound of all StreamThreads the Autopilot can coordinate.
+     * An upper bound of all StreamThreads Autopilot is allowed to simultaneously coordinate.
      */
     @NotNull
     @PositiveOrZero
-    private Integer streamThreadLimit = 0;
+    private Integer streamThreadLimit = 2;
 
     /**
-     * To trigger the addition or removal of StreamThreads.
+     * To trigger Autopilot StreamThreads automation.
      */
     @NotNull
     @PositiveOrZero
@@ -66,7 +65,7 @@ public class AutopilotConfiguration {
         private Duration betweenRuns = Duration.ofMinutes(5);
 
         /**
-         * The period Autopilot will wait for the StreamThreads to stabilize.
+         * A waiting period for the StreamThreads to stabilize.
          */
         @NotNull
         private Duration recoveryWindow = Duration.ofMinutes(10);

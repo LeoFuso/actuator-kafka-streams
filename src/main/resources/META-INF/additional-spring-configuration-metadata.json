@@ -1,18 +1,183 @@
 {
-  "groups": [],
+  "groups": [
+    {
+      "name": "management.endpoint.autopilotthread",
+      "type": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotThreadEndpoint",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotThreadEndpoint"
+    },
+    {
+      "name": "management.endpoint.readonlystatestore",
+      "type": "io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.ReadOnlyStateStoreEndpoint",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.ReadOnlyStateStoreEndpoint"
+    },
+    {
+      "name": "management.endpoint.restart",
+      "type": "io.github.leofuso.autoconfigure.actuator.kafka.streams.restart.RestartEndpoint",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.restart.RestartEndpoint"
+    },
+    {
+      "name": "management.endpoint.statestorerestore",
+      "type": "io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateStoreRestoreEndpoint",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateStoreRestoreEndpoint"
+    },
+    {
+      "name": "management.endpoint.topology",
+      "type": "io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpoint",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpoint"
+    },
+    {
+      "name": "management.health.autopilot",
+      "type": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration"
+    },
+    {
+      "name": "management.health.autopilot.period",
+      "type": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration$Period",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration",
+      "sourceMethod": "getPeriod()"
+    },
+    {
+      "name": "management.health.kstreams",
+      "type": "io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KStreamsIndicatorProperties",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KStreamsIndicatorProperties"
+    }
+  ],
   "properties": [
     {
-      "name": "management.health.kstreams.enabled",
+      "name": "management.endpoint.autopilotthread.enabled",
       "type": "java.lang.Boolean",
-      "description": "Whether to enable KafkaStreams health check.",
+      "description": "Whether to enable the autopilotthread endpoint.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotThreadEndpoint",
       "defaultValue": false
+    },
+    {
+      "name": "management.endpoint.readonlystatestore.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable the readonlystatestore endpoint.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.ReadOnlyStateStoreEndpoint",
+      "defaultValue": false
+    },
+    {
+      "name": "management.endpoint.restart.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable the restart endpoint.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.restart.RestartEndpoint",
+      "defaultValue": false
+    },
+    {
+      "name": "management.endpoint.statestorerestore.cache.time-to-live",
+      "type": "java.time.Duration",
+      "description": "Maximum time that a response can be cached.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateStoreRestoreEndpoint",
+      "defaultValue": "0ms"
+    },
+    {
+      "name": "management.endpoint.statestorerestore.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable the statestorerestore endpoint.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateStoreRestoreEndpoint",
+      "defaultValue": false
+    },
+    {
+      "name": "management.endpoint.topology.cache.time-to-live",
+      "type": "java.time.Duration",
+      "description": "Maximum time that a response can be cached.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpoint",
+      "defaultValue": "0ms"
+    },
+    {
+      "name": "management.endpoint.topology.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable the topology endpoint.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpoint",
+      "defaultValue": false
+    },
+    {
+      "name": "management.health.autopilot.exclusion-pattern",
+      "type": "java.util.regex.Pattern",
+      "description": "Excludes topics from the lag calculation matching the specified pattern.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration",
+      "defaultValue": "(?i).*(-changelog|subscription-registration-topic|-subscription-response-topic)$"
+    },
+    {
+      "name": "management.health.autopilot.lag-threshold",
+      "type": "java.lang.Long",
+      "description": "To trigger Autopilot StreamThreads automation.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration",
+      "defaultValue": 20000
+    },
+    {
+      "name": "management.health.autopilot.stream-thread-limit",
+      "type": "java.lang.Integer",
+      "description": "An upper bound of all StreamThreads Autopilot is allowed to simultaneously coordinate.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration",
+      "defaultValue": 2
+    },
+    {
+      "name": "management.health.autopilot.period.initial-delay",
+      "type": "java.time.Duration",
+      "description": "A waiting period before the first Autopilot run.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration$Period",
+      "defaultValue": "150s"
+    },
+    {
+      "name": "management.health.autopilot.period.between-runs",
+      "type": "java.time.Duration",
+      "description": "A period between Autopilot runs.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration$Period",
+      "defaultValue": "5m"
+    },
+    {
+      "name": "management.health.autopilot.period.recovery-window",
+      "type": "java.time.Duration",
+      "description": "A waiting period for the StreamThreads to stabilize.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration$Period",
+      "defaultValue": "10m"
     },
     {
       "name": "management.health.autopilot.enabled",
       "type": "java.lang.Boolean",
-      "description": "Whether to authorize Autopilot to increase the StreamThread count automatically.",
+      "description": "Whether to enable Autopilot StreamThread automatic coordination.",
+      "defaultValue": false
+    },
+    {
+      "name": "management.health.kstreams.minimum-number-of-live-stream-threads",
+      "type": "java.lang.Integer",
+      "description": "A required minimum number of running StreamThreads. Ignored if \"allow-thread-loss\" is false.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KStreamsIndicatorProperties",
+      "defaultValue": 1
+    },
+    {
+      "name": "management.health.kstreams.allow-thread-loss",
+      "type": "java.lang.Boolean",
+      "description": "Whether to allow any of the initially requested StreamThreads to shutdown with errors.",
+      "sourceType": "io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KStreamsIndicatorProperties",
+      "defaultValue": true
+    },
+    {
+      "name": "management.health.kstreams.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable KStreams health check.",
       "defaultValue": false
     }
   ],
-  "hints": []
+  "hints": [
+    {
+      "name": "management.health.autopilot.exclusion-pattern",
+      "values": [
+        {
+          "value" : "(?i).*(-changelog|subscription-registration-topic|-subscription-response-topic)$",
+          "description": "Excludes only changelog, registration and subscription response topics."
+        },
+        {
+          "value" : "(?=)",
+          "description": "Excludes every topic."
+        },
+        {
+          "value" : "(?!)",
+          "description": "Includes every topic."
+        }
+      ]
+    }
+  ]
 }

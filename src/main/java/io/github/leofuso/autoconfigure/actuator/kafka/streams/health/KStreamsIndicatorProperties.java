@@ -9,12 +9,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class KStreamsIndicatorProperties {
 
     /**
-     * A required minimum number of running StreamThreads. Ignored if allowThreadLoss is false.
+     * A required minimum number of running StreamThreads. Ignored if "allow-thread-loss" is false.
      */
     private int minimumNumberOfLiveStreamThreads = 1;
 
     /**
-     * Allows any of the initially requested StreamThreads to shutdown with errors.
+     * Whether to allow any of the initially requested StreamThreads to shutdown with errors.
      */
     private boolean allowThreadLoss = true;
 
