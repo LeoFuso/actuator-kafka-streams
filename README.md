@@ -17,13 +17,13 @@ Maven
 <dependency>
   <groupId>io.github.leofuso</groupId>
   <artifactId>actuator-kafka-streams</artifactId>
-  <version>v2.7.0.4.RELEASE</version>
+  <version>v2.7.0.5.RELEASE</version>
 </dependency>
 ``` 
 
 Gradle
 ```groovy
-implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.0.4.RELEASE'
+implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.0.5.RELEASE'
 ```
 
 The version indicates the compatibility with the Spring Boot. In other worlds, I'll try to keep it up to date with other
@@ -63,7 +63,7 @@ management.endpoint.health.group.readiness.include=ping, kstreams
 ```
 
 A StreamThread can fail by any number of reasons, some of them are out of our control, like Network related problems. 
-Keeping that in mind, by default, the health-check allows for downed StreamThreads count to be up a maximum of `num.stream.threads` - 1, 
+Keeping that in mind, by default, the health-check allows for downed StreamThreads count to be up a maximum of (`num.stream.threads` - 1), 
 and can be configured further using the following properties.
 
 ```txt
@@ -87,16 +87,18 @@ _readiness_ probes, as it only serves as a window to the functionality of the Au
 The Autopilot can have its behavior regulated by different properties.
 
 ```txt
-management.health.autopilot.period=15s
-management.health.autopilot.timeout=45s
-management.health.autopilot.lag-threshold=10000
-management.health.autopilot.stream-thread-limit=3
-management.health.autopilot.exclusion-pattern=.*
+management.health.autopilot.period.initial-delay=1m
+management.health.autopilot.period.between-runs=5m
+management.health.autopilot.period.recovery-window=100s
+management.health.autopilot.lag-threshold=20000
+management.health.autopilot.stream-thread-limit=5
+management.health.autopilot.exclusion-pattern=(?i).*(-changelog|subscription-registration-topic|-subscription-response-topic)$
 ```
 
-By order of appearance, the period in which the Autopilot will scan for partition-lag above the threshold, a timeout
-applied for each action performed by the Autopilot, a partition-lag threshold that coordinates all Autopilot actions,
-an upper limit for StreamThreads created by the Autopilot, and an exclusion pattern, if you want to have some
+By order of appearance: an initial period in which Autopilot will delay its run; the period between two Autopilot runs, 
+where it will scan for partition-lag above the threshold, and act accordingly; a timeout applied for each action performed by Autopilot,
+applied to give the StreamThreads time to recover; a partition-lag threshold that coordinates all Autopilot actions;
+an upper limit of simultaneously coordinated StreamThreads by Autopilot; and an exclusion pattern, if you want to have some
 topics excluded by the Autopilot scan. 
 
 ## Endpoints
@@ -104,8 +106,8 @@ topics excluded by the Autopilot scan.
 ### Restart
 
 You can force-restart a running, and possible unresponsive, KafkaStreams instance by invoking the following 
-actuator endpoint. This will completely stop all running StreamThreads, and try to restart the entire Topology. This
-utility can leave the application in an unrecoverable state. 
+actuator endpoint. This will completely stop all running StreamThreads, and try to restart the entire Topology. 
+<strong>WARNING</strong>:This utility can leave the application in an unrecoverable state. 
 
 ```
 /actuator/restart
@@ -117,9 +119,9 @@ Further, you also need to add `restart` to `management.endpoints.web.exposure.in
 
 ### Autopilot-Thread
 
-When enabled, the Autopilot comes with an endpoint to manually increase or decrease the current number of running 
-StreamThreads. By invoking the following endpoint with `POST` and `DELETE` HTTP Methods, you can increase and decrease
-the StreamThread count, respectively.
+When enabled, the Autopilot comes with two flavors: automated runs and manual control; either way, this endpoint allows for 
+manual increments or decrements of running StreamThreads. By invoking the following endpoint with `POST` and `DELETE` HTTP Methods, 
+you can increase and decrease the StreamThread count, respectively.
 
 ```
 /actuator/autopilotthread
@@ -157,7 +159,7 @@ Further, you also need to add `statestorerestore` endpoint to `management.endpoi
 
 ### ReadOnly-State-Store Queries
 
-You can query for specific (key/value) and (key/timestamped value) pairs of a store. This action is performed both 
+You can query for specific (key/value) and (key/timestamped value){**coming soon**} pairs of a store. This action is performed both 
 locally and remotely, with gRPC support. For this reason, if you're running a cluster of Stream Applications, your App
 must be available to be queried by other Apps on the network, as the state of your Stream App is distributed across
 multiple instances. You'll also need to provide the needed server configuration for Kafka Streams API.
@@ -177,7 +179,7 @@ The provided key must be in the string format of the actual default key defined 
 converters are not capable to achieve the desired conversion, you can provide your own converter to do so.
 
 ```
-/actuator/readonlystatestore/some-store-that-holds-uuid-keys/adde3d47-ee2f-4e3a-9fa0-1ab274ad1ee4
+/actuator/readonlystatestore/app-store/adde3d47-ee2f-4e3a-9fa0-1ab274ad1ee4
 ```
 
 In the case that a specific store doesn't support the default key, you can specify one by providing the Serde class 
@@ -236,7 +238,7 @@ Optionally, you can import all dependencies by yourself, e.g, if you're using Ma
 
 
 ## Contributors
-and a special thanks to
+a special thanks to
 
 [![Linkedin Badge](https://img.shields.io/badge/-fcarvalhooliveira-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/in/fcarvalhooliveira/)](https://www.linkedin.com/in/fcarvalhooliveira/)
 [![Github Badge](https://img.shields.io/badge/-fcoliveira-000?style=flat-square&logo=Github&logoColor=white&link=https://github.com/fcoliveira)](https://github.com/fcoliveira)
@@ -244,7 +246,7 @@ and a special thanks to
 
 [![Linkedin Badge](https://img.shields.io/badge/-renatomms-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/in/renatomms/)](https://www.linkedin.com/in/renatomms/)
 
-
+...for giving me ideas, support and feedback. You guys rock.
 
 
 
