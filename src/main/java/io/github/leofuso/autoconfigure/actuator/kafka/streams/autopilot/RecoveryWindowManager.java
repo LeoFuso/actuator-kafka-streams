@@ -31,7 +31,7 @@ class RecoveryWindowManager {
     /**
      * The point-in-time marking the last recorded window start.
      */
-    private final Instant timestamp = Instant.EPOCH;
+    private Instant timestamp = Instant.MIN;
 
     /**
      * A {@link Duration period} of stability to maintain between each transition.
@@ -56,14 +56,28 @@ class RecoveryWindowManager {
     /**
      * @return either or not the recovery window has closed.
      */
+    @SuppressWarnings("unused")
     boolean isClosed() {
+        return !isOpen();
+    }
+
+    /**
+     * @return either or not the recovery window is open.
+     */
+    boolean isOpen() {
 
         final Instant checkpoint = Instant.now(clock);
         final Duration elapsed = Duration.between(timestamp, checkpoint);
 
-        final boolean isClosed = elapsed.compareTo(window) >= 0;
-        if (!isClosed && logger.isDebugEnabled()) {
+        final boolean isOpen = elapsed.compareTo(window) < 0;
+        if (isOpen && logger.isDebugEnabled()) {
+
             final Duration remaining = window.minus(elapsed);
+            if(remaining.isNegative()) {
+                logger.debug("A recovery window is in place, and will remain open for an unknown amount of time.");
+                return true;
+            }
+
             final String prettyWindow = CompactNumberFormatUtils.format(window);
             final String prettyRemaining = CompactNumberFormatUtils.format(remaining);
             logger.debug(
@@ -71,16 +85,9 @@ class RecoveryWindowManager {
                     prettyWindow,
                     prettyRemaining
             );
-            return false;
+            return true;
         }
-        return true;
-    }
-
-    /**
-     * @return either or not the recovery window is open.
-     */
-    boolean isOpen() {
-        return !isClosed();
+        return false;
     }
 
     private class RecoverHook implements StateListener {
@@ -93,10 +100,10 @@ class RecoveryWindowManager {
         @Override
         public void onChange(final State newState, final State oldState) {
             if (newState == RECOVER_TRIGGER) {
-                final Instant checkpoint = Instant.now(clock);
-                timestamp.with(checkpoint);
+                timestamp = Instant.now(clock);
                 logger.debug("KafkaStreams has reached a known stable state, the recovery window count-down has begun.");
             }
+            timestamp = Instant.MIN;
         }
     }
 }

@@ -65,7 +65,7 @@ public class AutopilotHealthIndicator extends AbstractHealthIndicator {
                            })
                            .toList();
 
-            builder.withDetail("threads", threads);
+            builder.withDetail("thread.info", threads);
             final Status status = support
                     .invoke(Autopilot::state)
                     .map(statuses::get)

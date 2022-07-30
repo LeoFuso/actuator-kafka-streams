@@ -15,6 +15,8 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.TaskMetadata;
 import org.apache.kafka.streams.ThreadMetadata;
 import org.apache.kafka.streams.processor.internals.StreamThread;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.health.AbstractHealthIndicator;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Status;
@@ -31,8 +33,11 @@ import static org.apache.kafka.streams.StreamsConfig.configDef;
  */
 public class KStreamsHealthIndicator extends AbstractHealthIndicator {
 
-    private static final String KEY = "KStreams";
+    private static final Logger logger = LoggerFactory.getLogger(KStreamsHealthIndicator.class);
 
+    /**
+     * Used to extract info from {@link KafkaStreams} instance.
+     */
     private final StreamsBuilderFactoryBean streamsBuilderFactoryBean;
 
     /**
@@ -84,7 +89,8 @@ public class KStreamsHealthIndicator extends AbstractHealthIndicator {
         try {
             buildStreamDetails(builder);
         } catch (Exception e) {
-            builder.down(e);
+            logger.error("Health-check failure:", e);
+            builder.unknown();
         }
     }
 
@@ -92,7 +98,7 @@ public class KStreamsHealthIndicator extends AbstractHealthIndicator {
 
         final KafkaStreams kafkaStreams = streamsBuilderFactoryBean.getKafkaStreams();
         if (kafkaStreams == null) {
-            builder.withDetail(KEY, "StreamBuilderFactoryBean probably hasn't fully started yet.")
+            builder.withDetail("diagnostic", "StreamBuilderFactoryBean probably hasn't fully started yet.")
                    .down();
             return;
         }
@@ -103,35 +109,27 @@ public class KStreamsHealthIndicator extends AbstractHealthIndicator {
                         .map(config -> (String) config.get(APPLICATION_ID_CONFIG));
 
         if (applicationId.isEmpty()) {
-            builder.withDetail(KEY, "Application.id wasn't supplied.")
+            builder.withDetail("diagnostic", "[application.id] property wasn't supplied.")
                    .down();
             return;
         }
 
         final Map<String, Object> details = new HashMap<>();
 
-        details.put("applicationId", applicationId.get());
+        details.put("application.id", applicationId.get());
         details.put("threads", threadDetails(kafkaStreams));
 
         final KafkaStreams.State state = kafkaStreams.state();
-        boolean isRunning = state.isRunningOrRebalancing();
-        if (!isRunning) {
-            final String diagnosticMessage = String.format(
-                    "[ %s ] is down: KafkaStreams state [ %s ]",
-                    applicationId.get(),
-                    state
-            );
-            details.put(KEY, diagnosticMessage);
-        }
+        details.put("state", state);
 
+        boolean isRunning = state.isRunningOrRebalancing();
         final boolean hasMinimumThreadCount = hasMinimumThreadCount(kafkaStreams);
         if (!hasMinimumThreadCount) {
             final String diagnosticMessage = String.format(
-                    "[ %s ] did not reach the required minimum number of live threads: [ %s ]",
-                    applicationId.get(),
-                    allowThreadLoss ? minNumOfLiveStreamThreads: "num.stream.threads"
+                    "App did not reach the required minimum number of live Stream Thread: %s.",
+                    allowThreadLoss ? minNumOfLiveStreamThreads: "[num.stream.threads] property"
             );
-            details.put("minNumberOfLiveThreads", diagnosticMessage);
+            details.put("minimum-number-of-live-stream-threads", diagnosticMessage);
         }
 
         builder.withDetails(details);
@@ -145,25 +143,26 @@ public class KStreamsHealthIndicator extends AbstractHealthIndicator {
                 .stream()
                 .sorted(Comparator.comparing(ThreadMetadata::threadName))
                 .map(metadata -> Map.of(
-                        "threadName", metadata.threadName(),
-                        "threadState", metadata.threadState(),
-                        "adminClientId", metadata.adminClientId(),
-                        "consumerClientId", metadata.consumerClientId(),
-                        "restoreConsumerClientId", metadata.restoreConsumerClientId(),
-                        "producerClientIds", metadata.producerClientIds(),
-                        "activeTasks", taskDetails(metadata.activeTasks()),
-                        "standbyTasks", taskDetails(metadata.standbyTasks())
+                        "thread.name", metadata.threadName(),
+                        "thread.state", metadata.threadState(),
+                        "admin.client.id", metadata.adminClientId(),
+                        "consumer.client.id", metadata.consumerClientId(),
+                        "restore.consumer.client.id", metadata.restoreConsumerClientId(),
+                        "producer.client.ids", metadata.producerClientIds(),
+                        "active.tasks", taskDetails(metadata.activeTasks()),
+                        "standby.tasks", taskDetails(metadata.standbyTasks())
                 ))
                 .toList();
     }
 
     private List<Map<String, Object>> taskDetails(Set<TaskMetadata> taskMetadata) {
+        final String taskIdKey = "task.id";
         return taskMetadata.stream()
                            .map(metadata -> Map.of(
-                                   "taskId", "%s".formatted(metadata.taskId()),
+                                   taskIdKey, "%s".formatted(metadata.taskId()),
                                    "partitions", addPartitionsInfo(metadata)
                            ))
-                           .sorted(Comparator.comparing(map -> (String) map.get("taskId")))
+                           .sorted(Comparator.comparing(map -> (String) map.get(taskIdKey)))
                            .toList();
     }
 
@@ -183,8 +182,8 @@ public class KStreamsHealthIndicator extends AbstractHealthIndicator {
                     @SuppressWarnings("UnnecessaryLocalVariable")
                     final Map<String, Object> entries = Map.ofEntries(
                             Map.entry("partition", "%s".formatted(tp)),
-                            Map.entry("committedOffset", committedOffset),
-                            Map.entry("endOffset", endOffset),
+                            Map.entry("committed.offset", committedOffset),
+                            Map.entry("end.offset", endOffset),
                             Map.entry("lag", numberFormat.format(lag))
                     );
 

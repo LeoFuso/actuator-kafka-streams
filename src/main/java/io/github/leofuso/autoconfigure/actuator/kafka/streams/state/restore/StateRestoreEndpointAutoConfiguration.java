@@ -19,10 +19,7 @@ import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.CompositeSta
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for {@link StateRestoreListener} feature and its endpoint.
  */
-@AutoConfiguration(
-        before = {CompositeStateAutoConfiguration.class, KafkaStreamsDefaultConfiguration.class},
-        after = {EndpointAutoConfiguration.class}
-)
+@AutoConfiguration(before = {EndpointAutoConfiguration.class, CompositeStateAutoConfiguration.class})
 @ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class, Endpoint.class})
 @ConditionalOnAvailableEndpoint(endpoint = StateStoreRestoreEndpoint.class)
 public class StateRestoreEndpointAutoConfiguration {
@@ -48,12 +45,8 @@ public class StateRestoreEndpointAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(StateStoreRestoreEndpoint.class)
-    public StateStoreRestoreEndpoint stateStoreRestoreEndpoint(ObjectProvider<StateStoreRestoreRepository> provider) {
-        final StateStoreRestoreRepository repository = provider.getIfAvailable();
-        if (repository != null) {
-            return new StateStoreRestoreEndpoint(repository);
-        }
-        return null;
+    public StateStoreRestoreEndpoint statestorerestoreEndpoint(ObjectProvider<StateStoreRestoreRepository> provider) {
+        return new StateStoreRestoreEndpoint(provider);
     }
 
 }

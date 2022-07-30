@@ -35,6 +35,8 @@ import com.google.common.collect.Sets;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactNumberFormatUtils;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.ConfigUtils;
 
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State.BOOSTING;
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State.DECREASING;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration.Period;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -105,7 +107,7 @@ public class DefaultAutopilot implements Autopilot {
     /**
      * Helper to format huge numbers, commonly placed in situations of high partition-lag.
      */
-    private static final NumberFormat numberFormat = NumberFormat.getCompactNumberInstance(
+    private static final NumberFormat NUMBER_FORMAT = NumberFormat.getCompactNumberInstance(
             Locale.US,
             NumberFormat.Style.SHORT
     );
@@ -140,7 +142,7 @@ public class DefaultAutopilot implements Autopilot {
         final Long threshold = config.getLagThreshold();
         logger.info(
                 "Autopilot is gathering lag info from all StreamThreads. Looking for partition-lag above [{}].",
-                numberFormat.format(threshold)
+                NUMBER_FORMAT.format(threshold)
         );
 
         final WriteLock lock = stateLock.writeLock();
@@ -173,8 +175,8 @@ public class DefaultAutopilot implements Autopilot {
         }
 
         final boolean canActUpon = state.isValidTransition(
-                State.BOOSTING,
-                State.DECREASING,
+                BOOSTING,
+                DECREASING,
                 State.STAND_BY
         );
 
@@ -197,16 +199,16 @@ public class DefaultAutopilot implements Autopilot {
         final State nextState = decideNextState();
         return switch (nextState) {
             case STAND_BY, BOOSTED -> {
-                    state = nextState;
+                state = nextState;
                 yield CompletableFuture.completedFuture(state);
             }
             case BOOSTING -> {
-                logger.info("Autopilot is [{}] the StreamThread count.", state);
+                logger.info("Autopilot is [{}] the StreamThread count.", BOOSTING);
                 yield doAddStreamThread()
                         .thenApply(thread -> state);
             }
             case DECREASING -> {
-                logger.info("Autopilot is [{}] the StreamThread count.", state);
+                logger.info("Autopilot is [{}] the StreamThread count.", DECREASING);
                 yield doRemoveStreamThread()
                         .thenApply(thread -> state);
             }
@@ -227,7 +229,7 @@ public class DefaultAutopilot implements Autopilot {
                 .orElse(0L);
 
         final long average = accumulatedLag / (threadCount == 0 ? 1 : threadCount);
-        logger.info("Autopilot found an average partition-lag of {}", numberFormat.format(average));
+        logger.info("Autopilot found an average partition-lag of {}", NUMBER_FORMAT.format(average));
 
         final int threadLimit = desiredThreadCount + config.getStreamThreadLimit();
         if (threadLimit == threadCount) {
@@ -236,6 +238,7 @@ public class DefaultAutopilot implements Autopilot {
                     threadCount,
                     threadLimit
             );
+            return State.BOOSTED;
         }
 
         final Long threshold = config.getLagThreshold();
@@ -252,18 +255,18 @@ public class DefaultAutopilot implements Autopilot {
                 targetThreadCount,
                 threadCount
         );
-        return targetThreadCount > threadCount ? State.BOOSTING
-                : targetThreadCount < threadCount ? State.DECREASING
+        return targetThreadCount > threadCount ? BOOSTING
+                : targetThreadCount < threadCount ? DECREASING
                 : targetThreadCount.equals(desiredThreadCount) ? State.STAND_BY
                 : State.BOOSTED;
     }
 
     @Override
     public CompletableFuture<String> addStreamThread(final Duration timeout) {
-        if (state.isValidTransition(State.BOOSTING)) {
+        if (state.isValidTransition(BOOSTING)) {
             final String message = "Autopilot [NOOP]. Cannot manually transition from [%s] to [%s].".formatted(
                     state,
-                    State.BOOSTING
+                    BOOSTING
             );
             final IllegalStateException ex = new IllegalStateException(message);
             return CompletableFuture.failedFuture(ex);
@@ -290,7 +293,7 @@ public class DefaultAutopilot implements Autopilot {
     }
 
     private CompletableFuture<String> doAddStreamThread() {
-        state = State.BOOSTING;
+        state = BOOSTING;
         return supplyAsync(streams::addStreamThread)
                 .handleAsync((result, throwable) -> {
 
@@ -320,10 +323,10 @@ public class DefaultAutopilot implements Autopilot {
 
     @Override
     public CompletableFuture<String> removeStreamThread(final Duration timeout) {
-        if (state.isValidTransition(State.DECREASING)) {
+        if (state.isValidTransition(DECREASING)) {
             final String message = "Autopilot [NOOP]. Cannot manually transition from [%s] to [%s].".formatted(
                     state,
-                    State.DECREASING
+                    DECREASING
             );
             final IllegalStateException ex = new IllegalStateException(message);
             return CompletableFuture.failedFuture(ex);
@@ -350,7 +353,7 @@ public class DefaultAutopilot implements Autopilot {
     }
 
     private CompletableFuture<String> doRemoveStreamThread() {
-        state = State.DECREASING;
+        state = DECREASING;
         return supplyAsync(streams::removeStreamThread)
                 .handleAsync((result, throwable) -> {
 
