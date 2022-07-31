@@ -213,24 +213,19 @@ Optionally, you can import all dependencies by yourself, e.g, if you're using Ma
 ```xml
 <dependencies>
     <dependency>
-        <groupId>org.apache.tomcat</groupId>
-        <artifactId>annotations-api</artifactId>
-        <version>6.0.53</version>
-    </dependency>
-    <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-protobuf</artifactId>
-        <version>1.47.0</version>
+        <version>1.48.0</version>
     </dependency>
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-stub</artifactId>
-        <version>1.47.0</version>
+        <version>1.48.0</version>
     </dependency>
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-netty-shaded</artifactId>
-        <version>1.47.0</version>
+        <version>1.48.0</version>
     </dependency>
 </dependencies>
 
