@@ -26,6 +26,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
@@ -33,7 +34,10 @@ import org.springframework.context.support.ConversionServiceFactoryBean;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplier;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplierAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.health.setup.StreamBuilderFactoryConfiguration;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.CompositeStateAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.InteractiveQueryEndpointAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.ReadOnlyStateStoreEndpoint;
 
@@ -43,6 +47,9 @@ import static org.apache.kafka.common.serialization.Serdes.Integer;
 import static org.apache.kafka.common.serialization.Serdes.Long;
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * {@link EnableAutoConfiguration Auto-configuration} test scenarios.
+ */
 @EmbeddedKafka(topics = {"join-in", "sum-in", "sum-out", "join-store-changelog", "sum-store-changelog"})
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class ReadOnlyStateStoreEndpointTest {
@@ -253,6 +260,7 @@ public class ReadOnlyStateStoreEndpointTest {
                 .withUserConfiguration(StreamBuilderFactoryConfiguration.class, KStreamApplication.class)
                 .withConfiguration(
                         AutoConfigurations.of(
+                                KStreamsSupplierAutoConfiguration.class,
                                 KafkaAutoConfiguration.class,
                                 InteractiveQueryEndpointAutoConfiguration.class
                         ));
@@ -280,11 +288,15 @@ public class ReadOnlyStateStoreEndpointTest {
                 .withUserConfiguration(StreamBuilderFactoryConfiguration.class, KStreamApplication.class)
                 .withConfiguration(
                         AutoConfigurations.of(
+                                KStreamsSupplierAutoConfiguration.class,
                                 KafkaAutoConfiguration.class,
                                 InteractiveQueryEndpointAutoConfiguration.class
                         ));
     }
 
+    /**
+     * A Dummy App.
+     */
     @Configuration
     public static class KStreamApplication {
 

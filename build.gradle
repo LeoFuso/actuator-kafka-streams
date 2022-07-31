@@ -10,7 +10,7 @@ plugins {
 }
 
 group 'io.github.leofuso'
-version 'v2.7.0.5-SNAPSHOT'
+version 'v2.7.0.5.RELEASE'
 
 
 repositories {
@@ -89,7 +89,7 @@ test {
 /* gRPC Support requires code to be generated based on .proto files, these must be packed together with the lib */
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.19.2"
+        artifact = 'com.google.protobuf:protoc:3.19.2'
     }
     plugins {
         grpc {

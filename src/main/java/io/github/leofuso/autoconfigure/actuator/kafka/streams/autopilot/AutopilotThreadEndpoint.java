@@ -1,5 +1,10 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
+import java.time.Duration;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
 import org.springframework.boot.actuate.endpoint.annotation.DeleteOperation;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
@@ -11,17 +16,17 @@ import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
 public class AutopilotThreadEndpoint {
 
     /**
-     * To delegate the actions to.
+     * To delegate actions to.
      */
-    private final Autopilot autopilot;
+    private final AutopilotSupport support;
 
     /**
-     * Creates a new {@link AutopilotThreadEndpoint} instance.
+     * Creates a new AutopilotThreadEndpoint instance.
      *
-     * @param autopilot to delegate the actions to.
+     * @param support to delegate the actions to.
      */
-    public AutopilotThreadEndpoint(final Autopilot autopilot) {
-        this.autopilot = autopilot;
+    public AutopilotThreadEndpoint(AutopilotSupport support) {
+        this.support = Objects.requireNonNull(support, "Autopilot [support] is required.");
     }
 
     /**
@@ -31,7 +36,11 @@ public class AutopilotThreadEndpoint {
      */
     @WriteOperation
     public void addStreamThread() {
-        autopilot.addStreamThread();
+        final Duration timeout = Duration.ofMinutes(1);
+        support.invoke(autopilot -> autopilot.addStreamThread(timeout))
+               .map(future -> future.thenApply(Optional::ofNullable))
+               .flatMap(CompletableFuture::join)
+               .orElseThrow();
     }
 
     /**
@@ -41,6 +50,10 @@ public class AutopilotThreadEndpoint {
      */
     @DeleteOperation
     public void removeStreamThread() {
-        autopilot.removeStreamThread();
+        final Duration timeout = Duration.ofMinutes(1);
+        support.invoke(autopilot -> autopilot.removeStreamThread(timeout))
+               .map(future -> future.thenApply(Optional::ofNullable))
+               .flatMap(CompletableFuture::join)
+               .orElseThrow();
     }
 }

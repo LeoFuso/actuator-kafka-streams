@@ -16,12 +16,19 @@ import io.grpc.stub.StreamObserver;
 
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.SerializationUtils.serialize;
 
+/**
+ * The skeleton that receives all gRPC invocations and delegates to the right {@link RemoteStateStore store}.
+ */
 public class RemoteStateStoreService extends StateStoreGrpc.StateStoreImplBase {
 
     private final HostManager manager;
 
+    /**
+     * Constructs a new RemoteStateStoreService instance.
+     * @param manager used to locate the correct {@link RemoteStateStore} to delegate the invocations to.
+     */
     public RemoteStateStoreService(HostManager manager) {
-        this.manager = Objects.requireNonNull(manager, "Field [manager] is required.");
+        this.manager = Objects.requireNonNull(manager, "HostManager [manager] is required.");
     }
 
     @Override

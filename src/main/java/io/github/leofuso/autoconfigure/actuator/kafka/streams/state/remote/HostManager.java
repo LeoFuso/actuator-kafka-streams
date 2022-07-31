@@ -48,7 +48,7 @@ public interface HostManager {
 
     /**
      * Performs a clean-up by starting a shutdown process for all {@link RemoteStateStore stores} associated with this
-     * {@link HostManager manager}, and removing all associated {@link HostInfo hosts} with it.
+     * manager, and removing all associated {@link HostInfo hosts} with it.
      */
     void cleanUp();
 
@@ -62,6 +62,10 @@ public interface HostManager {
 
         private final HostManager manager;
 
+        /**
+         * Constructs a new CleanUpListener instance.
+         * @param manager to delegate the {@link HostManager#cleanUp()} action to.
+         */
         public CleanUpListener(final HostManager manager) {
             this.manager = Objects.requireNonNull(manager, "HostManager [manager] is required.");
         }

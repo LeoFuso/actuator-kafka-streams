@@ -1,5 +1,7 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.restart;
 
+import java.util.Objects;
+
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
 import org.springframework.kafka.config.StreamsBuilderFactoryBean;
@@ -21,7 +23,7 @@ public class RestartEndpoint {
      * @param factory to delegate the restart action to.
      */
     public RestartEndpoint(final StreamsBuilderFactoryBean factory) {
-        this.factory = factory;
+        this.factory = Objects.requireNonNull(factory, "StreamsBuilderFactoryBean [factory] is required.");
     }
 
     /**

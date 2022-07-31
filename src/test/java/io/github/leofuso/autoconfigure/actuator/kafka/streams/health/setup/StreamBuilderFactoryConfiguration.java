@@ -7,6 +7,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.config.KafkaStreamsConfiguration;
 
+/**
+ * Tests stand-in replacement.
+ */
 @Configuration
 @EnableKafkaStreams
 public class StreamBuilderFactoryConfiguration {

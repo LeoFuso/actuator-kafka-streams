@@ -19,6 +19,7 @@ import org.springframework.core.Ordered;
  * A {@link SmartUncaughtExceptionHandler} can be configured and decide either or not should recover from a thrown
  * {@link Exception exception}.
  */
+@SuppressWarnings("unused")
 public class SmartUncaughtExceptionHandler implements StreamsUncaughtExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(SmartUncaughtExceptionHandler.class);
@@ -43,14 +44,14 @@ public class SmartUncaughtExceptionHandler implements StreamsUncaughtExceptionHa
     private final Set<UncaughtExceptionDecider> deciders;
 
     /**
-     * Creates a new instance of {@link SmartUncaughtExceptionHandler}.
+     * Creates a new instance of SmartUncaughtExceptionHandler.
      */
     public SmartUncaughtExceptionHandler() {
         this(Stream.empty());
     }
 
     /**
-     * Creates a new instance of {@link SmartUncaughtExceptionHandler}.
+     * Creates a new instance of SmartUncaughtExceptionHandler.
      *
      * @param deciders used to decide either or not a
      *                 {@link org.apache.kafka.streams.processor.internals.StreamThread thread} can be replaced.
@@ -74,8 +75,8 @@ public class SmartUncaughtExceptionHandler implements StreamsUncaughtExceptionHa
 
         for (Class<? extends Throwable> nonRecoverable : obligatoryUnrecoverableInclusion) {
             if (nonRecoverable.isAssignableFrom(exceptionClass)) {
-                logger.error("Applying [shutdown-application] strategy from unrecoverable inclusions.", exception);
-                return StreamThreadExceptionResponse.SHUTDOWN_APPLICATION;
+                logger.error("Applying [shutdown-client] strategy from unrecoverable inclusions.", exception);
+                return StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
             }
         }
 
@@ -87,8 +88,8 @@ public class SmartUncaughtExceptionHandler implements StreamsUncaughtExceptionHa
                 return StreamThreadExceptionResponse.REPLACE_THREAD;
             }
         }
-        logger.error("Exhausted all recover strategies. Applying [shutdown-application] strategy.", exception);
-        return StreamThreadExceptionResponse.SHUTDOWN_APPLICATION;
+        logger.error("Exhausted all recover strategies. Applying [shutdown-client] strategy.", exception);
+        return StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
     }
 
     /**

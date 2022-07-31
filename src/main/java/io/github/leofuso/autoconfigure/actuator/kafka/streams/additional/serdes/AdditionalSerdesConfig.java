@@ -26,11 +26,21 @@ import static org.apache.kafka.common.config.ConfigDef.parseType;
  */
 public class AdditionalSerdesConfig extends AbstractConfig {
 
+    /**
+     * Root for all properties associated with {@link AdditionalSerdesConfig}.
+     */
     public static final String ADDITIONAL_SERDES_CONFIG = "additional.serdes";
+
+    /**
+     * <code>additional.serdes</code> doc.
+     */
     public static final String ADDITIONAL_SERDES_DOC =
             "A comma delimited list containing the fully qualified name of all additional serdes in which its " +
             "lifecycle can be managed by the framework.";
 
+    /**
+     * Root for all additional properties associated with {@link AdditionalSerdesConfig}.
+     */
     public static final String ADDITIONAL_SERDES_PROPERTIES_PREFIX = ADDITIONAL_SERDES_CONFIG + "properties";
 
     private static final ConfigDef CONFIG;

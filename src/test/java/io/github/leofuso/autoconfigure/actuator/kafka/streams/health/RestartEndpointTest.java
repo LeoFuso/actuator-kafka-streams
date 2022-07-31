@@ -105,6 +105,9 @@ class RestartEndpointTest {
                         ));
     }
 
+    /**
+     * A Dummy App.
+     */
     @Configuration
     public static class KStreamApplication {
 

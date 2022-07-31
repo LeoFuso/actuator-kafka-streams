@@ -12,9 +12,10 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.streams.processor.StateRestoreListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactDurationFormat;
 
 /**
  * Used as a State carrier of all restorations performed during the lifecycle of the Stream application.
@@ -26,6 +27,10 @@ public class ConcurrentStateStoreRestoreCarrier implements StateStoreRestoreRepo
     private final ConcurrentHashMap<String, Map<String, Object>> restorations;
     private final Clock clock;
 
+    /**
+     * Constructs a new ConcurrentStateStoreRestoreCarrier instance.
+     * @param clock to mark the time between states.
+     */
     public ConcurrentStateStoreRestoreCarrier(final Clock clock) {
         this.restorations = new ConcurrentHashMap<>();
         this.clock = clock;
@@ -73,10 +78,10 @@ public class ConcurrentStateStoreRestoreCarrier implements StateStoreRestoreRepo
 
         accessStateRestore(topicPartition, storeName, state -> {
             final Map<String, Long> offset = Map.of(
-                    "startingOffset", startingOffset,
-                    "endingOffset", endingOffset
+                    "starting.offset", startingOffset,
+                    "ending.offset", endingOffset
             );
-            state.put("startCheckpoint", checkpointMilli);
+            state.put("start.checkpoint", checkpointMilli);
             state.put("offset", offset);
         });
     }
@@ -99,8 +104,8 @@ public class ConcurrentStateStoreRestoreCarrier implements StateStoreRestoreRepo
 
             final Map<String, Object> batch = Map.of(
                     "checkpoint", checkpointMilli,
-                    "batchEndOffset", batchEndOffset,
-                    "numRestored", numRestored
+                    "batch.endOffset", batchEndOffset,
+                    "num.restored", numRestored
             );
 
             batches.add(batch);
@@ -114,19 +119,19 @@ public class ConcurrentStateStoreRestoreCarrier implements StateStoreRestoreRepo
         final long checkpointMilli = checkpointEnd.toEpochMilli();
 
         accessStateRestore(topicPartition, storeName, state -> {
-            state.put("totalRestored", totalRestored);
-            state.put("endCheckpoint", checkpointMilli);
+            state.put("total.restored", totalRestored);
+            state.put("end.checkpoint", checkpointMilli);
 
             final Instant startCheckpoint = Instant
-                    .ofEpochMilli((long) state.getOrDefault("startCheckpoint", checkpointMilli));
+                    .ofEpochMilli((long) state.getOrDefault("start.checkpoint", checkpointMilli));
 
             logger.info(
                     "Restoration [ {}, {} ] took {}. Restored entries [ {} ].",
                     storeName,
                     topicPartition,
-                    Duration.between(startCheckpoint, checkpointEnd),
+                    CompactDurationFormat.format(Duration.between(startCheckpoint, checkpointEnd)),
                     totalRestored
-                    );
+            );
         });
 
     }
