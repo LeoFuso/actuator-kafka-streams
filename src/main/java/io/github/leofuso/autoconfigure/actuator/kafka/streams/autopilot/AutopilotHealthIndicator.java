@@ -30,6 +30,9 @@ public class AutopilotHealthIndicator extends AbstractHealthIndicator {
             NumberFormat.Style.SHORT
     );
 
+    /**
+     * All {@link Autopilot.State} {@link Status} representations.
+     */
     public static final Map<Autopilot.State, Status> statuses =
             Map.of(
                     STAND_BY, new Status(STAND_BY.name(), STAND_BY.description()),

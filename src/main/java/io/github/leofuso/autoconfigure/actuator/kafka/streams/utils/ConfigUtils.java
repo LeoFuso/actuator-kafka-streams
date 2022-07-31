@@ -17,6 +17,14 @@ import static org.apache.kafka.common.config.ConfigDef.parseType;
  */
 public abstract class ConfigUtils {
 
+    /**
+     * Access a possible {@code null} or missing configuration inside a {@link Properties} instance.
+     * @param prop holder of a desired configuration value.
+     * @param key the key of the desired configuration value.
+     * @param definition the {@link ConfigDef}
+     * @param <T> the type, for smart casting.
+     * @return the configuration value.
+     */
     public static <T> Optional<T> access(@Nullable Properties prop, String key, ConfigDef definition) {
 
         if(prop == null) {

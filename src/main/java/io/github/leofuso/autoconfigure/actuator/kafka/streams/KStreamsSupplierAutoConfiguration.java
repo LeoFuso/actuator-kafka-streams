@@ -23,7 +23,7 @@ public class KStreamsSupplierAutoConfiguration {
 
     /**
      * Main bean factory for the {@link KStreamsSupplier}.
-     *
+     * @param config needed in most of the use cases where a {@link KStreamsSupplier} is present.
      * @return a new {@link KStreamsSupplier}.
      */
     @Bean

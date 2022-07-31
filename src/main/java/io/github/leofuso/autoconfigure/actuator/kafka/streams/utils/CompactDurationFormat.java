@@ -2,14 +2,11 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.utils;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
 
 /**
- * Used to compact big numbers.
+ * Used to compact the default {@link Duration#toString()} return.
  */
-public abstract class CompactNumberFormatUtils {
+public abstract class CompactDurationFormat {
 
     /**
      * @param duration the {@link Duration} to pretty print.

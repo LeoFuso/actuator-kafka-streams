@@ -36,13 +36,11 @@ public class AutopilotThreadEndpoint {
      */
     @WriteOperation
     public void addStreamThread() {
-        final Duration timeout = Duration.ofSeconds(10);
+        final Duration timeout = Duration.ofMinutes(1);
         support.invoke(autopilot -> autopilot.addStreamThread(timeout))
                .map(future -> future.thenApply(Optional::ofNullable))
                .flatMap(CompletableFuture::join)
-               .ifPresent(thread -> {
-                   //  TODO
-               });
+               .orElseThrow();
     }
 
     /**
@@ -52,12 +50,10 @@ public class AutopilotThreadEndpoint {
      */
     @DeleteOperation
     public void removeStreamThread() {
-        final Duration timeout = Duration.ofSeconds(10);
+        final Duration timeout = Duration.ofMinutes(1);
         support.invoke(autopilot -> autopilot.removeStreamThread(timeout))
                .map(future -> future.thenApply(Optional::ofNullable))
                .flatMap(CompletableFuture::join)
-               .ifPresent(thread -> {
-                   // TODO
-               });
+               .orElseThrow();
     }
 }

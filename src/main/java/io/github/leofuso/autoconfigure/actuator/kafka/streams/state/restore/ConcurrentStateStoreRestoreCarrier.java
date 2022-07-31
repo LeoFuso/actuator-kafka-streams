@@ -15,7 +15,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactNumberFormatUtils;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactDurationFormat;
 
 /**
  * Used as a State carrier of all restorations performed during the lifecycle of the Stream application.
@@ -27,6 +27,10 @@ public class ConcurrentStateStoreRestoreCarrier implements StateStoreRestoreRepo
     private final ConcurrentHashMap<String, Map<String, Object>> restorations;
     private final Clock clock;
 
+    /**
+     * Constructs a new ConcurrentStateStoreRestoreCarrier instance.
+     * @param clock to mark the time between states.
+     */
     public ConcurrentStateStoreRestoreCarrier(final Clock clock) {
         this.restorations = new ConcurrentHashMap<>();
         this.clock = clock;
@@ -125,7 +129,7 @@ public class ConcurrentStateStoreRestoreCarrier implements StateStoreRestoreRepo
                     "Restoration [ {}, {} ] took {}. Restored entries [ {} ].",
                     storeName,
                     topicPartition,
-                    CompactNumberFormatUtils.format(Duration.between(startCheckpoint, checkpointEnd)),
+                    CompactDurationFormat.format(Duration.between(startCheckpoint, checkpointEnd)),
                     totalRestored
             );
         });

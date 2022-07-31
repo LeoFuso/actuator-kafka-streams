@@ -19,12 +19,25 @@ import static org.apache.kafka.streams.KafkaStreams.StateListener;
 @ConditionalOnClass(value = {KafkaStreamsDefaultConfiguration.class})
 public class CompositeStateAutoConfiguration {
 
+    /**
+     * Main Bean Factory for a {@link CompositeStateListener} that holds lazy references of {@link StateListener}.
+     *
+     * @param provider holder of lazy references of {@link StateListener}.
+     * @return a newly created {@link CompositeStateListener}.
+     */
     @Bean
     @ConditionalOnMissingBean(CompositeStateListener.class)
     public CompositeStateListener stateListener(ObjectProvider<StateListener> provider) {
         return new DefaultCompositeStateListener(provider);
     }
 
+    /**
+     * Main Bean Factory for a {@link CompositeStateRestoreListener} that holds lazy references of
+     * {@link StateRestoreListener}.
+     *
+     * @param provider holder of lazy references of {@link StateRestoreListener}.
+     * @return a newly created {@link CompositeStateRestoreListener}.
+     */
     @Bean
     @ConditionalOnMissingBean(CompositeStateRestoreListener.class)
     public CompositeStateRestoreListener stateRestoreListener(ObjectProvider<StateRestoreListener> provider) {

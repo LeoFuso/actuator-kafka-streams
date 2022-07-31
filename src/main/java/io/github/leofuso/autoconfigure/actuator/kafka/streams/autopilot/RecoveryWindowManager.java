@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactNumberFormatUtils;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactDurationFormat;
 
 import static org.apache.kafka.streams.KafkaStreams.State;
 import static org.apache.kafka.streams.KafkaStreams.StateListener;
@@ -78,8 +78,8 @@ class RecoveryWindowManager {
                 return true;
             }
 
-            final String prettyWindow = CompactNumberFormatUtils.format(window);
-            final String prettyRemaining = CompactNumberFormatUtils.format(remaining);
+            final String prettyWindow = CompactDurationFormat.format(window);
+            final String prettyRemaining = CompactDurationFormat.format(remaining);
             logger.debug(
                     "A recovery window of {} is in place, and will remain open for another {}.",
                     prettyWindow,

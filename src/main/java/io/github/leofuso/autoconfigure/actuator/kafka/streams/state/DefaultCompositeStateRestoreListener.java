@@ -20,6 +20,10 @@ public class DefaultCompositeStateRestoreListener implements CompositeStateResto
 
     private final ObjectProvider<StateRestoreListener> listeners;
 
+    /**
+     * Constructs a new DefaultCompositeStateRestoreListener instance.
+     * @param listeners a lazy reference of all {@link StateRestoreListener} available.
+     */
     public DefaultCompositeStateRestoreListener(final ObjectProvider<StateRestoreListener> listeners) {
         this.listeners = listeners;
     }

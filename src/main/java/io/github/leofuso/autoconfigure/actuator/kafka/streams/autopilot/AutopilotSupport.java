@@ -27,10 +27,22 @@ public class AutopilotSupport implements StreamsBuilderFactoryBeanCustomizer {
     private final AutopilotConfiguration config;
     private final KafkaStreamsConfiguration streamConfig;
 
+    /**
+     * Static Factory for Automated {@link Autopilot} instances.
+     * @param streamConfig used to configure {@link Autopilot}.
+     * @param config used to configure {@link Autopilot}.
+     * @return a newly created AutopilotSupport holding a reference for an {@link Autopilot}.
+     */
     public static AutopilotSupport automated(KafkaStreamsConfiguration streamConfig, AutopilotConfiguration config) {
         return new AutopilotSupport(true, streamConfig, config);
     }
 
+    /**
+     * Static Factory for Manual {@link Autopilot} instances.
+     * @param streamConfig used to configure {@link Autopilot}.
+     * @param config used to configure {@link Autopilot}.
+     * @return a newly created AutopilotSupport holding a reference for an {@link Autopilot}.
+     */
     public static AutopilotSupport manual(KafkaStreamsConfiguration streamConfig, AutopilotConfiguration config) {
         return new AutopilotSupport(false, streamConfig, config);
     }

@@ -32,9 +32,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Sets;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactNumberFormatUtils;
+import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.CompactDurationFormat;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.utils.ConfigUtils;
 
+import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State.*;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State.BOOSTING;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State.DECREASING;
 import static io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotConfiguration.Period;
@@ -54,7 +55,7 @@ public class DefaultAutopilot implements Autopilot {
     /**
      * The current {@link io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State}.
      */
-    private State state = State.STAND_BY;
+    private State state = STAND_BY;
 
     /**
      * A lock for the {@link io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.Autopilot.State}.
@@ -112,6 +113,12 @@ public class DefaultAutopilot implements Autopilot {
             NumberFormat.Style.SHORT
     );
 
+    /**
+     * Constructs a new DefaultAutopilot instance, non-automated.
+     * @param streams to delegate the actions to, and holder of required thread info.
+     * @param config used to coordinate {@link Autopilot} automated actions.
+     * @param properties used to coordinate {@link Autopilot} automated actions.
+     */
     public DefaultAutopilot(KafkaStreams streams, AutopilotConfiguration config, Properties properties) {
         this.streams = Objects.requireNonNull(streams, "KafkaStreams [streams] is required.");
         this.config = Objects.requireNonNull(config, "AutopilotConfiguration [config] is required.");
@@ -177,7 +184,7 @@ public class DefaultAutopilot implements Autopilot {
         final boolean canActUpon = state.isValidTransition(
                 BOOSTING,
                 DECREASING,
-                State.STAND_BY
+                STAND_BY
         );
 
         if (!canActUpon) {
@@ -238,7 +245,7 @@ public class DefaultAutopilot implements Autopilot {
                     threadCount,
                     threadLimit
             );
-            return State.BOOSTED;
+            return BOOSTED;
         }
 
         final Long threshold = config.getLagThreshold();
@@ -257,8 +264,8 @@ public class DefaultAutopilot implements Autopilot {
         );
         return targetThreadCount > threadCount ? BOOSTING
                 : targetThreadCount < threadCount ? DECREASING
-                : targetThreadCount.equals(desiredThreadCount) ? State.STAND_BY
-                : State.BOOSTED;
+                : targetThreadCount.equals(desiredThreadCount) ? STAND_BY
+                : BOOSTED;
     }
 
     @Override
@@ -314,7 +321,7 @@ public class DefaultAutopilot implements Autopilot {
 
                     final String threadName = result.get();
                     logger.info("A StreamThread [{}] was successfully added by Autopilot.", threadName);
-                    state = State.BOOSTED;
+                    state = BOOSTED;
 
                     return threadName;
                 })
@@ -460,8 +467,8 @@ public class DefaultAutopilot implements Autopilot {
         executor.scheduleAtFixedRate(this, initialDelayInMillis, betweenRunsInMillis, TimeUnit.MILLISECONDS);
         this.windowManager = windowManager;
 
-        final String prettyInitialDelay = CompactNumberFormatUtils.format(initialDelay);
-        final String prettyPeriod = CompactNumberFormatUtils.format(betweenRuns);
+        final String prettyInitialDelay = CompactDurationFormat.format(initialDelay);
+        final String prettyPeriod = CompactDurationFormat.format(betweenRuns);
         logger.info(
                 "Autopilot scheduled. Will commence in {} with evaluation periods every {}.",
                 prettyInitialDelay,
