@@ -18,7 +18,6 @@ import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
@@ -34,10 +33,8 @@ import org.springframework.context.support.ConversionServiceFactoryBean;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplier;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplierAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.health.setup.StreamBuilderFactoryConfiguration;
-import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.CompositeStateAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.InteractiveQueryEndpointAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.ReadOnlyStateStoreEndpoint;
 
@@ -118,18 +115,15 @@ public class ReadOnlyStateStoreEndpointTest {
     }
 
     @Test
-    @Disabled("Unstable. Netty problems, but can be run alone.")
     @DisplayName("Given a remote and local state, with default key-serde, when queried, then should return correct value")
     void t4() {
         /* Given */
-        final int randomPort = (int) (Math.random() * 100);
-        final int serverPort = 20000 + randomPort;
-        readonlystatestore(serverPort, new Properties())
+        readonlystatestore(19099, new Properties())
                 .run(serverContext -> {
 
                     final UUID serverKey = UUID.randomUUID();
                     final UUID clientKey = UUID.randomUUID();
-                    readonlystatestore( serverPort + 1, new Properties())
+                    readonlystatestore( 19199, new Properties())
                             .run(clientContext -> {
 
                                 produce(
@@ -249,6 +243,7 @@ public class ReadOnlyStateStoreEndpointTest {
                         "spring.kafka.bootstrap-servers=" + broker.getBrokersAsString(),
                         "spring.kafka.streams.application-id=" + UUID.randomUUID(),
                         "spring.kafka.streams.cleanup.on-startup=true",
+                        "spring.kafka.streams.cleanup.on-stop=true",
                         "spring.kafka.streams.properties." +
                                 (port >= 0 ? "application.server=localhost:" + port : "random.property=0"),
                         "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",

@@ -142,7 +142,7 @@ class KStreamsHealthIndicatorTest {
                             new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "other-value")
                     );
                     /* When & Then */
-                    expect(indicator, Status.DOWN, Duration.ofSeconds(3));
+                    expect(indicator, Status.DOWN, Duration.ofSeconds(4));
                 });
     }
 

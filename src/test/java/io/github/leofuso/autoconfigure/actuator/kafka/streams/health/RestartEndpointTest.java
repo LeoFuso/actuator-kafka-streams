@@ -61,30 +61,6 @@ class RestartEndpointTest {
                 .run(context -> assertThat(context).doesNotHaveBean(RestartEndpoint.class));
     }
 
-    @Test
-    @DisplayName("Given a restart, when asked for it, then should have restarted.")
-    void t2() {
-
-        /* Given */
-        restart(true).run(context -> {
-
-            final RestartEndpoint restart = context.getBean(RestartEndpoint.class);
-
-            /* When */
-            restart.restart();
-
-            /* Then */
-            final StreamsBuilderFactoryBean factory = context.getBean(StreamsBuilderFactoryBean.class);
-            assertThat(factory)
-                    .isNotNull()
-                    .extracting(StreamsBuilderFactoryBean::isRunning)
-                    .isSameAs(true);
-
-        });
-    }
-
-
-
     private ApplicationContextRunner restart(Boolean enabled) {
         return new ApplicationContextRunner()
                 .withPropertyValues(
@@ -92,10 +68,10 @@ class RestartEndpointTest {
                         "management.endpoints.web.exposure.include=" + (enabled ? "restart" : ""),
                         "spring.kafka.bootstrap-servers=" + broker.getBrokersAsString(),
                         "spring.kafka.streams.application-id=application-" + UUID.randomUUID(),
-                        "spring.kafka.streams.cleanup.on-startup=true",
                         "spring.kafka.streams.properties.default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
                         "spring.kafka.streams.properties.default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde",
-                        "spring.kafka.streams.properties.auto.offset.reset=earliest"
+                        "spring.kafka.streams.properties.auto.offset.reset=earliest",
+                        "spring.kafka.streams.properties.state.dir=./local-state-store/" + UUID.randomUUID()
                 )
                 .withUserConfiguration(StreamBuilderFactoryConfiguration.class, KStreamApplication.class)
                 .withConfiguration(
