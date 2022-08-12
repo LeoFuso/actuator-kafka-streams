@@ -12,12 +12,11 @@ import java.util.stream.Stream;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
-import org.apache.kafka.streams.errors.StreamsNotStartedException;
+import org.apache.kafka.streams.StreamsMetadata;
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.QueryableStoreType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.kafka.config.StreamsBuilderFactoryBean;
 
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplier;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.grpc.GrpcChannelConfigurer;
@@ -57,7 +56,10 @@ public class DefaultHostManager implements HostManager {
         final KeyQueryMetadata metadata = streams.queryMetadataForKey(storeName, key, serializer);
         final boolean notAvailable = metadata.equals(KeyQueryMetadata.NOT_AVAILABLE);
         if (notAvailable) {
-            return Optional.empty();
+            /* Unique client scenario, find first available host anyway. */
+            return streams.metadataForAllStreamsClients().stream()
+                          .findFirst()
+                          .map(StreamsMetadata::hostInfo);
         }
 
         final HostInfo host = metadata.activeHost();
@@ -103,7 +105,7 @@ public class DefaultHostManager implements HostManager {
                 stub.initialize();
             }
 
-            logger.trace("Adding host[{}:{}] with ref[{}] to known hosts.", host.host(), host.host(), ref);
+            logger.trace("Adding host[{}:{}] with ref[{}] to known hosts.", host.host(), host.port(), ref);
             stores.put(host, remote);
             return Optional.of(remote);
         }
