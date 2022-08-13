@@ -270,7 +270,7 @@ public class DefaultAutopilot implements Autopilot {
 
     @Override
     public CompletableFuture<String> addStreamThread(final Duration timeout) {
-        if (state.isValidTransition(BOOSTING)) {
+        if (!state.isValidTransition(BOOSTING)) {
             final String message = "Autopilot [NOOP]. Cannot manually transition from [%s] to [%s].".formatted(
                     state,
                     BOOSTING
@@ -330,7 +330,7 @@ public class DefaultAutopilot implements Autopilot {
 
     @Override
     public CompletableFuture<String> removeStreamThread(final Duration timeout) {
-        if (state.isValidTransition(DECREASING)) {
+        if (!state.isValidTransition(DECREASING)) {
             final String message = "Autopilot [NOOP]. Cannot manually transition from [%s] to [%s].".formatted(
                     state,
                     DECREASING

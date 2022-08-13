@@ -2,6 +2,7 @@ package io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endp
 
 import javax.annotation.Nullable;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -9,6 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
+import org.apache.kafka.streams.state.ValueAndTimestamp;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
@@ -24,14 +26,14 @@ import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.Argum
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteKeyValueStateStore;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteQuerySupport;
 
-import static org.apache.kafka.streams.state.QueryableStoreTypes.keyValueStore;
+import static org.apache.kafka.streams.state.QueryableStoreTypes.timestampedKeyValueStore;
 
 /**
  * Actuator endpoint for querying
- * {@link io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.RemoteKeyValueStateStore stores}.
+ * {@link RemoteKeyValueStateStore stores}.
  */
-@Endpoint(id = "readonlystatestore")
-public class ReadOnlyStateStoreEndpoint {
+@Endpoint(id = "timestampedreadonlystatestore")
+public class TimestampedReadOnlyStateStoreEndpoint {
 
     private static final String ERROR_MESSAGE_KEY = "message";
 
@@ -44,7 +46,7 @@ public class ReadOnlyStateStoreEndpoint {
      * @param support to delegate the queries to.
      * @param mapper to build a JsonNode from query result, if needed.
      */
-    public ReadOnlyStateStoreEndpoint(RemoteQuerySupport support, ObjectMapper mapper) {
+    public TimestampedReadOnlyStateStoreEndpoint(RemoteQuerySupport support, ObjectMapper mapper) {
         this.support = Objects.requireNonNull(support, "RemoteQuerySupport [support] is required.");
         this.mapper = Objects.requireNonNull(mapper, "ObjectMapper [mapper] is required.");
     }
@@ -65,27 +67,31 @@ public class ReadOnlyStateStoreEndpoint {
     @ReadOperation
     public <K, V> JsonNode find(@Selector String store, @Selector String key, @Nullable String serde) {
 
-        final BiFunction<K, RemoteKeyValueStateStore, CompletableFuture<V>> invocation =
-                (k, s) -> s.findOne(k, store);
+        final BiFunction<K, RemoteKeyValueStateStore, CompletableFuture<ValueAndTimestamp<V>>> invocation =
+                (k, s) -> s.findOneTimestamped(k, store);
 
         try {
 
-            final Arguments<K, V, RemoteKeyValueStateStore> arguments =
+            final Arguments<K, ValueAndTimestamp<V>, RemoteKeyValueStateStore> arguments =
                     Arguments.perform(invocation)
                              .passing(key, serde)
-                             .on(store, keyValueStore());
+                             .on(store, timestampedKeyValueStore());
 
-            final CompletableFuture<V> invocationFuture = support.invoke(arguments)
+            final CompletableFuture<ValueAndTimestamp<V>> invocationFuture = support.invoke(arguments)
                                                                  .orTimeout(10, TimeUnit.SECONDS);
 
-            /* Try to find a way of making this endpoint Reactive? */
-            final Object value = invocationFuture.get();
+            final ValueAndTimestamp<V> value = invocationFuture.get();
 
             final ObjectNode object = mapper.createObjectNode();
             object.put("key", key);
 
             final String stringifiedValue =
                     Optional.ofNullable(value)
+                            .map(v -> {
+                                final Instant timestamp = Instant.ofEpochMilli(v.timestamp());
+                                object.put("timestamp", timestamp.toString());
+                                return v.value();
+                            })
                             .map(Object::toString)
                             .orElse(Strings.EMPTY);
             try {
@@ -100,6 +106,7 @@ public class ReadOnlyStateStoreEndpoint {
             }
 
         } catch (Exception ex) {
+
             final Throwable cause = ex.getCause();
             final String message = Optional
                     .ofNullable(cause)

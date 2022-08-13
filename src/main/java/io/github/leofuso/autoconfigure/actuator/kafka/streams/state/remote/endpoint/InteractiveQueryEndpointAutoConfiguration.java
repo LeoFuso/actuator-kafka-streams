@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.kafka.annotation.KafkaStreamsDefaultConfiguration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.Service;
 
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplier;
@@ -150,11 +151,15 @@ public class InteractiveQueryEndpointAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnAvailableEndpoint(endpoint = ReadOnlyStateStoreEndpoint.class)
-    public ReadOnlyStateStoreEndpoint readOnlyStateStoreEndpoint(ObjectProvider<RemoteQuerySupport> provider) {
-        final RemoteQuerySupport support = provider.getIfAvailable();
-        if (support != null) {
-            return new ReadOnlyStateStoreEndpoint(support);
-        }
-        return null;
+    public ReadOnlyStateStoreEndpoint readOnlyStateStoreEndpoint(RemoteQuerySupport support, ObjectMapper mapper) {
+        return new ReadOnlyStateStoreEndpoint(support, mapper);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnAvailableEndpoint(endpoint = TimestampedReadOnlyStateStoreEndpoint.class)
+    public TimestampedReadOnlyStateStoreEndpoint timestampedReadOnlyStateStoreEndpoint(RemoteQuerySupport support,
+                                                                                       ObjectMapper mapper) {
+        return new TimestampedReadOnlyStateStoreEndpoint(support, mapper);
     }
 }

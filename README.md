@@ -17,13 +17,13 @@ Maven
 <dependency>
   <groupId>io.github.leofuso</groupId>
   <artifactId>actuator-kafka-streams</artifactId>
-  <version>v2.7.2.5.RELEASE</version>
+  <version>v2.7.2.6.RELEASE</version>
 </dependency>
 ``` 
 
 Gradle
 ```groovy
-implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.2.5.RELEASE'
+implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.2.6.RELEASE'
 ```
 
 The version indicates the compatibility with the Spring Boot. In other worlds, I'll try to keep it up to date with other
@@ -34,9 +34,9 @@ Spring Boot versions, e.g, the `v2.7.x.y.RELEASE` should be compatible with the 
 All dependencies are optional by default. To access its functionalities you'll need both Spring Boot's Actuator and
 Spring Boot for Apache Kafka dependencies, and some other ones, in your classpath, e.g.
 ```groovy
+implementation 'org.springframework.boot:spring-boot-starter-web'
 implementation 'org.springframework.boot:spring-boot-starter-actuator'
 implementation 'org.springframework.kafka:spring-kafka'
-implementation 'com.fasterxml.jackson.core:jackson-databind'
 implementation 'com.google.code.findbugs:jsr305:3.0.2'
 ```
 
@@ -159,7 +159,7 @@ Further, you also need to add `statestorerestore` endpoint to `management.endpoi
 
 ### ReadOnly-State-Store Queries
 
-You can query for specific (key/value) and (key/timestamped value){**coming soon**} pairs of a store. This action is performed both 
+You can query for specific (key/value) and (key/timestamped value) pairs of a store. This action is performed both 
 locally and remotely, with gRPC support. For this reason, if you're running a cluster of Stream Applications, your App
 must be available to be queried by other Apps on the network, as the state of your Stream App is distributed across
 multiple instances. You'll also need to provide the needed server configuration for Kafka Streams API.
@@ -168,10 +168,14 @@ multiple instances. You'll also need to provide the needed server configuration 
 spring.kafka.streams.properties.application.server=localhost:9090
 ```
 
-Having all set, you can access specific states by asking the endpoint:
+Having all set, you can access specific states by asking the endpoints:
 
 ```
 /actuator/readonlystatestore/{storeName}/{key}
+```
+or
+```
+/actuator/timestampedreadonlystatestore/{storeName}/{key}
 ```
 
 The provided key must be in the string format of the actual default key defined as Stream properties,
@@ -199,7 +203,8 @@ spring.kafka.streams.properties.additional.serdes.properties.another.property=an
 
 You need to include the actuator and web dependencies, on top of additional ones, for the gRPC client and server.
 If you're using Gradle, you can simply enable the `grpc-support` feature. Further, you also need to 
-add `readonlystatestore` endpoint to `management.endpoints.web.exposure.include` property. By default, this endpoint is disabled.
+add `readonlystatestore` and `timestampedreadonlystatestore` endpoint to `management.endpoints.web.exposure.include` property. 
+By default, this endpoint is disabled.
 
 ```groovy
 implementation ('io.github.leofuso:actuator-kafka-stream:v2.7.x.y.RELEASE') {
