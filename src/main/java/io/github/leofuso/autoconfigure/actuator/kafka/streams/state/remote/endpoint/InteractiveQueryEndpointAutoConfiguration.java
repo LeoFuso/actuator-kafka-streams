@@ -154,4 +154,12 @@ public class InteractiveQueryEndpointAutoConfiguration {
     public ReadOnlyStateStoreEndpoint readOnlyStateStoreEndpoint(RemoteQuerySupport support, ObjectMapper mapper) {
         return new ReadOnlyStateStoreEndpoint(support, mapper);
     }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnAvailableEndpoint(endpoint = TimestampedReadOnlyStateStoreEndpoint.class)
+    public TimestampedReadOnlyStateStoreEndpoint timestampedReadOnlyStateStoreEndpoint(RemoteQuerySupport support,
+                                                                                       ObjectMapper mapper) {
+        return new TimestampedReadOnlyStateStoreEndpoint(support, mapper);
+    }
 }

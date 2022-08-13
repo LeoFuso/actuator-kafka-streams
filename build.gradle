@@ -10,7 +10,7 @@ plugins {
 }
 
 group 'io.github.leofuso'
-version 'v2.7.2.6-SNAPSHOT'
+version 'v2.7.2.6.RELEASE'
 
 
 repositories {
