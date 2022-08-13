@@ -26,12 +26,18 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ConversionServiceFactoryBean;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplierAutoConfiguration;
 import io.github.leofuso.autoconfigure.actuator.kafka.streams.health.setup.StreamBuilderFactoryConfiguration;
@@ -86,54 +92,80 @@ public class ReadOnlyStateStoreEndpointTest {
     }
 
     @Test
-    @DisplayName("Given a local state, with default key-serde, when queried, then should return correct value")
-    void t3() {
+    @DisplayName(
+    """
+                    
+                     Given a local state, with default key-serde;
+                     When queried;
+                     should return correct value
+                    
+    """
+    )
+    void t3() throws JsonProcessingException {
         /* Given */
+
+        final String randomKey = "9daccdfc-c620-4eee-bd0b-88df8610c264";
+        final ObjectMapper mapper = new ObjectMapper();
+        final JsonNode expectedNode = mapper.readTree("{\"key\":\"9daccdfc-c620-4eee-bd0b-88df8610c264\", \"value\":123}");
+
         readonlystatestore(true, 19090)
                 .run(context -> {
 
-                    final UUID randomKey = UUID.randomUUID();
+
                     produce(
                             broker,
-                            new ProducerRecord<>("join-in", randomKey + "", "1"),
-                            new ProducerRecord<>("join-in", randomKey + "", "2"),
-                            new ProducerRecord<>("join-in", randomKey + "", "3")
+                            new ProducerRecord<>("join-in", randomKey, "1"),
+                            new ProducerRecord<>("join-in", randomKey, "2"),
+                            new ProducerRecord<>("join-in", randomKey, "3")
                     );
 
                     await(broker, Duration.ofSeconds(2), "join-store-changelog");
 
                     /* When */
                     final ReadOnlyStateStoreEndpoint endpoint = context.getBean(ReadOnlyStateStoreEndpoint.class);
-                    final Map<String, String> response = endpoint.find("join-store", randomKey + "", null);
+                    final JsonNode actualNode = endpoint.find("join-store", randomKey, null);
 
                     /* Then */
-                    assertThat(response)
-                            .isNotEmpty()
-                            .containsOnlyKeys(randomKey + "")
-                            .hasEntrySatisfying(randomKey + "", s -> assertThat(s).isEqualTo("123"));
+                    assertThat(actualNode)
+                            .isEqualTo(expectedNode);
                 });
     }
 
     @Test
-    @DisplayName("Given a remote and local state, with default key-serde, when queried, then should return correct value")
-    void t4() {
+    @DisplayName(
+    """
+                    
+                     Given a remote and local state, with default key-serde;
+                     When queried;
+                     Then should return correct value
+                    
+    """
+    )
+    void t4() throws JsonProcessingException {
         /* Given */
+
+        final String serverKey = "8daccdfc-c620-4eee-bd0b-88df8610c263";
+        final String clientKey = "8daccdfc-c620-4eee-bd0b-88df8610c264";
+
+        final ObjectMapper mapper = new ObjectMapper();
+        final JsonNode expectedClientNode = mapper.readTree("{\"key\":\"8daccdfc-c620-4eee-bd0b-88df8610c263\", \"value\":\"abc\"}");
+        final JsonNode expectedServerNode = mapper.readTree("{\"key\":\"8daccdfc-c620-4eee-bd0b-88df8610c264\", \"value\":123}");
+
         readonlystatestore(19099, new Properties())
                 .run(serverContext -> {
 
-                    final UUID serverKey = UUID.randomUUID();
-                    final UUID clientKey = UUID.randomUUID();
+
                     readonlystatestore( 19199, new Properties())
                             .run(clientContext -> {
 
                                 produce(
                                         broker,
-                                        new ProducerRecord<>("join-in",clientKey + "", "1"),
-                                        new ProducerRecord<>("join-in",clientKey + "", "2"),
-                                        new ProducerRecord<>("join-in",clientKey + "", "3"),
-                                        new ProducerRecord<>("join-in",serverKey + "", "a"),
-                                        new ProducerRecord<>("join-in",serverKey + "", "b"),
-                                        new ProducerRecord<>("join-in",serverKey + "", "c")
+                                        new ProducerRecord<>("join-in",clientKey, "1"),
+                                        new ProducerRecord<>("join-in",clientKey, "2"),
+                                        new ProducerRecord<>("join-in",clientKey, "3"),
+                                        new ProducerRecord<>("join-in",serverKey, "a"),
+                                        new ProducerRecord<>("join-in",serverKey, "b"),
+                                        new ProducerRecord<>("join-in",serverKey, "c")
                                 );
                                 await(broker, Duration.ofSeconds(5), "join-store-changelog");
 
@@ -141,37 +173,46 @@ public class ReadOnlyStateStoreEndpointTest {
                                 final ReadOnlyStateStoreEndpoint clientEndpoint =
                                         clientContext.getBean(ReadOnlyStateStoreEndpoint.class);
 
-                                final Map<String, String> clientResponse = clientEndpoint.find(
+                                final JsonNode actualClientNode = clientEndpoint.find(
                                         "join-store",
-                                        serverKey + "",
+                                        serverKey,
                                         null
                                 );
 
                                 /* Then */
-                                assertThat(clientResponse)
-                                        .isNotEmpty()
-                                        .containsOnlyKeys(serverKey + "")
-                                        .hasEntrySatisfying(serverKey + "", s -> assertThat(s).isEqualTo("abc"));
+                                assertThat(actualClientNode)
+                                        .isEqualTo(expectedClientNode);
                             });
 
 
                     /* When */
                     final ReadOnlyStateStoreEndpoint serverEndpoint =
                             serverContext.getBean(ReadOnlyStateStoreEndpoint.class);
-                    final Map<String, String> serverResponse = serverEndpoint.find("join-store", clientKey + "", null);
+                    final JsonNode actualServerNode = serverEndpoint.find("join-store", clientKey, null);
+
 
                     /* Then */
-                    assertThat(serverResponse)
-                            .isNotEmpty()
-                            .containsOnlyKeys(clientKey + "")
-                            .hasEntrySatisfying(clientKey + "", s -> assertThat(s).isEqualTo("123"));
+                    assertThat(actualServerNode)
+                            .isEqualTo(expectedServerNode);
                 });
     }
 
     @Test
-    @DisplayName("Given a local state, with supported key-serde, when queried, then should return correct value")
-    void t5() {
+    @DisplayName(
+    """
+    
+                     Given a local state, with supported key-serde;
+                     When queried;
+                     Then should return correct value
+    
+    """
+    )
+    void t5() throws JsonProcessingException {
         /* Given */
+
+        final ObjectMapper mapper = new ObjectMapper();
+        final JsonNode expectedNode = mapper.readTree("{\"key\":\"25\", \"value\":6}");
+
         readonlystatestore(true, 19090)
                 .run(context -> {
 
@@ -190,18 +231,24 @@ public class ReadOnlyStateStoreEndpointTest {
                     /* When */
                     final ReadOnlyStateStoreEndpoint endpoint = context.getBean(ReadOnlyStateStoreEndpoint.class);
 
-                    final Map<String, String> response = endpoint.find("sum-store", longKey, serdeClass);
+                    final JsonNode actualNode = endpoint.find("sum-store", longKey, serdeClass);
 
                     /* Then */
-                    assertThat(response)
-                            .isNotEmpty()
-                            .containsOnlyKeys(longKey)
-                            .hasEntrySatisfying(longKey, s -> assertThat(s).isEqualTo("6"));
+                    assertThat(actualNode)
+                            .isEqualTo(expectedNode);
                 });
     }
 
     @Test
-    @DisplayName("Given a local state, with unsupported mapping, when queried, then should return conversion error")
+    @DisplayName(
+    """
+    
+                     Given a local state, with unsupported mapping;
+                     When queried;
+                     Then should return conversion error
+    
+    """
+    )
     void t6() {
         /* Given */
         readonlystatestore(true, 19090)
@@ -222,12 +269,14 @@ public class ReadOnlyStateStoreEndpointTest {
                     /* When */
                     final ReadOnlyStateStoreEndpoint endpoint = context.getBean(ReadOnlyStateStoreEndpoint.class);
 
-                    final Map<String, String> response = endpoint.find("sum-store", longKey + "L", serdeClass);
+                    final JsonNode jsonNode = endpoint.find("sum-store", longKey + "L", serdeClass);
+                    ObjectMapper mapper = new ObjectMapper();
+                    Map<String, Object> response = mapper.convertValue(jsonNode, new TypeReference<>(){});
 
                     /* Then */
                     assertThat(response)
                             .isNotEmpty()
-                            .hasEntrySatisfying("message", s -> assertThat(s).contains("NumberFormatException"));
+                            .hasEntrySatisfying("message", s -> assertThat(s).asString().contains("NumberFormatException"));
                 });
     }
 
@@ -255,6 +304,7 @@ public class ReadOnlyStateStoreEndpointTest {
                 .withUserConfiguration(StreamBuilderFactoryConfiguration.class, KStreamApplication.class)
                 .withConfiguration(
                         AutoConfigurations.of(
+                                JacksonAutoConfiguration.class,
                                 KStreamsSupplierAutoConfiguration.class,
                                 KafkaAutoConfiguration.class,
                                 InteractiveQueryEndpointAutoConfiguration.class
@@ -283,6 +333,7 @@ public class ReadOnlyStateStoreEndpointTest {
                 .withUserConfiguration(StreamBuilderFactoryConfiguration.class, KStreamApplication.class)
                 .withConfiguration(
                         AutoConfigurations.of(
+                                JacksonAutoConfiguration.class,
                                 KStreamsSupplierAutoConfiguration.class,
                                 KafkaAutoConfiguration.class,
                                 InteractiveQueryEndpointAutoConfiguration.class
