@@ -31,7 +31,7 @@ Spring Boot versions, e.g, the `v2.7.x.y.RELEASE` should be compatible with the 
 
 ## Usage
 
-All dependencies are optional by default. To access its functionalities you'll need both Spring Boot's Actuator and
+All dependencies are optional by default. To access its functionalities you will need both Spring Boot's Actuator and
 Spring Boot for Apache Kafka dependencies, and some other ones, in your classpath, e.g.
 ```groovy
 implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -72,7 +72,7 @@ management.health.kstreams.minimum-number-of-live-stream-threads=1
 ```
 
 If the desired behavior is not to allow for threads to die, one can choose to disabled it. That way, if
-any StreamThreads happens to stop working, the health-check should take it into account. Alternatively, you can pick
+any StreamThreads happen to stop working, the health-check should take it into account. Alternatively, you can pick
 a desired number of minimum live StreamThreads to work with.
 
 ### Autopilot
@@ -81,7 +81,7 @@ An Autopilot aims to avoid unnecessary horizontal auto-scale behavior by, from t
 partition lag associated with this KafkaStreams App, and deciding to add or remove StreamThreads accordingly. The
 Autopilot can be allowed to run automatically by setting the property `management.health.autopilot.enabled` to `true`. 
 
-Once enabled, the Autopilot comes with its own health-check, but it should not be included in any _liveness_ or
+Once enabled, the Autopilot comes with its own health-check, but it shouldn't be included in any _liveness_ or
 _readiness_ probes, as it only serves as a window to the functionality of the Autopilot.
 
 The Autopilot can have its behavior regulated by different properties.
@@ -159,16 +159,16 @@ Further, you also need to add `statestorerestore` endpoint to `management.endpoi
 
 ### ReadOnly-State-Store Queries
 
-You can query for specific (key/value) and (key/timestamped value) pairs of a store. This action is performed both 
-locally and remotely, with gRPC support. For this reason, if you're running a cluster of Stream Applications, your App
-must be available to be queried by other Apps on the network, as the state of your Stream App is distributed across
-multiple instances. You'll also need to provide the needed server configuration for Kafka Streams API.
+You can query for specific (key/value) and (key/timestamped value) pairs from a store. This action is performed both 
+locally and remotely, with gRPC support. 
+For this reason, if you are running a cluster of Stream Applications, your App must be reachable to be queried by other Apps on the network, as the state of your Stream App is distributed across
+multiple instances. You will also need to give the needed server configurations for Kafka Streams API.
 
 ```properties
 spring.kafka.streams.properties.application.server=localhost:9090
 ```
 
-Having all set, you can access specific states by asking the endpoints:
+Having all set, you can access specific states by accessing the endpoints:
 
 ```
 /actuator/readonlystatestore/{storeName}/{key}
@@ -179,8 +179,8 @@ or
 ```
 
 The provided key must be in the string format of the actual default key defined as Stream properties,
-`default.key.serde`. This endpoint uses the Spring's ConversionService utility to apply the conversions. If the default
-converters are not capable to achieve the desired conversion, you can provide your own converter to do so.
+`default.key.serde`. This endpoint uses the Spring's ConversionService utility to apply the conversions.
+If the default converters aren't capable of achieving the desired conversion, you can provide your own converter to do so.
 
 ```
 /actuator/readonlystatestore/app-store/adde3d47-ee2f-4e3a-9fa0-1ab274ad1ee4
@@ -202,7 +202,7 @@ spring.kafka.streams.properties.additional.serdes.properties.another.property=an
 ```
 
 You need to include the actuator and web dependencies, on top of additional ones, for the gRPC client and server.
-If you're using Gradle, you can simply enable the `grpc-support` feature. Further, you also need to 
+If you are using Gradle, you can simply enable the `grpc-support` feature. Further, you also need to 
 add `readonlystatestore` and `timestampedreadonlystatestore` endpoint to `management.endpoints.web.exposure.include` property. 
 By default, this endpoint is disabled.
 
@@ -214,23 +214,23 @@ implementation ('io.github.leofuso:actuator-kafka-stream:v2.7.x.y.RELEASE') {
 }
 ```
 
-Optionally, you can import all dependencies by yourself, e.g, if you're using Maven.
+Optionally, you can import all dependencies by yourself, e.g, if you are using Maven.
 ```xml
 <dependencies>
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-protobuf</artifactId>
-        <version>1.48.0</version>
+        <version>1.49.2</version>
     </dependency>
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-stub</artifactId>
-        <version>1.48.0</version>
+        <version>1.49.2</version>
     </dependency>
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-netty-shaded</artifactId>
-        <version>1.48.0</version>
+        <version>1.49.2</version>
     </dependency>
 </dependencies>
 
