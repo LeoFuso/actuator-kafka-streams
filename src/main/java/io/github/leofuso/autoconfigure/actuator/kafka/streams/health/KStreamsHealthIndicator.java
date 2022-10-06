@@ -175,8 +175,8 @@ public class KStreamsHealthIndicator extends AbstractHealthIndicator {
                     final Map<TopicPartition, Long> committedMap = metadata.committedOffsets();
                     final Map<TopicPartition, Long> offsetMap = metadata.endOffsets();
 
-                    final long committedOffset = committedMap.get(tp);
-                    final long endOffset = offsetMap.get(tp);
+                    final long committedOffset = Optional.ofNullable(committedMap.get(tp)).orElse(0L);
+                    final long endOffset = Optional.ofNullable(offsetMap.get(tp)).orElse(0L);
                     final long lag = Math.max(0, endOffset - committedOffset);
 
                     @SuppressWarnings("UnnecessaryLocalVariable")

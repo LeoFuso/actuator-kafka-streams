@@ -54,7 +54,7 @@ public class DefaultHostManager implements HostManager {
     public <K> Optional<HostInfo> findHost(final K key, final Serializer<K> serializer, final String storeName) {
         final KafkaStreams streams = kStreamsSupplier.getOrThrows();
         final KeyQueryMetadata metadata = streams.queryMetadataForKey(storeName, key, serializer);
-        final boolean notAvailable = metadata.equals(KeyQueryMetadata.NOT_AVAILABLE);
+        final boolean notAvailable = metadata == null || KeyQueryMetadata.NOT_AVAILABLE.equals(metadata);
         if (notAvailable) {
             /* Unique client scenario, find first available host anyway. */
             return streams.metadataForAllStreamsClients().stream()

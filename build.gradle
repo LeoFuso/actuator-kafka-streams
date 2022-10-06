@@ -10,7 +10,7 @@ plugins {
 }
 
 group 'io.github.leofuso'
-version 'v2.7.2.7-SNAPSHOT'
+version 'v2.7.2.7.RELEASE'
 
 
 repositories {
@@ -66,9 +66,9 @@ dependencies {
     principalImplementation 'org.apache.kafka:kafka-streams'
     principalImplementation 'com.google.code.findbugs:jsr305:3.0.2'
 
-    grpcSupportImplementation 'io.grpc:grpc-protobuf:1.48.0'
-    grpcSupportImplementation 'io.grpc:grpc-stub:1.48.0'
-    grpcSupportRuntimeElements 'io.grpc:grpc-netty-shaded:1.48.0'
+    grpcSupportImplementation 'io.grpc:grpc-protobuf:1.49.2'
+    grpcSupportImplementation 'io.grpc:grpc-stub:1.49.2'
+    grpcSupportRuntimeElements 'io.grpc:grpc-netty-shaded:1.49.2'
 
     /* Annotation Processors */
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
@@ -77,7 +77,7 @@ dependencies {
     /* Test */
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
-    testImplementation 'io.grpc:grpc-netty-shaded:1.48.0'
+    testImplementation 'io.grpc:grpc-netty-shaded:1.49.2'
 
 }
 
@@ -92,7 +92,7 @@ protobuf {
     }
     plugins {
         grpc {
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.48.0'
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.49.2'
         }
     }
     generateProtoTasks {
