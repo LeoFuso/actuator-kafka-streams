@@ -32,7 +32,7 @@ public class AdditionalSerdesConfig extends AbstractConfig {
     public static final String ADDITIONAL_SERDES_CONFIG = "additional.serdes";
 
     /**
-     * <code>additional.serdes</code> doc.
+     * {@code additional.serdes} doc.
      */
     public static final String ADDITIONAL_SERDES_DOC =
             "A comma delimited list containing the fully qualified name of all additional serdes in which its " +
@@ -59,7 +59,7 @@ public class AdditionalSerdesConfig extends AbstractConfig {
     }
 
     /**
-     * Create a new {@link AdditionalSerdesConfig} using the given properties.
+     * Create a new AdditionalSerdesConfig using the given properties.
      *
      * @param properties properties that specify additional {@link Serde serdes}.
      */
@@ -69,7 +69,7 @@ public class AdditionalSerdesConfig extends AbstractConfig {
 
     /**
      * Prefix a property with {@link #ADDITIONAL_SERDES_PROPERTIES_PREFIX}. This is used to isolate
-     * {@link AdditionalSerdesConfig additional serdes configs} from other client configs.
+     * additional serdes configs from other client configs.
      *
      * @param property the {@link Serde} property to be masked
      * @return ADDITIONAL_SERDES_PROPERTIES_PREFIX + {@code property}
@@ -146,7 +146,7 @@ public class AdditionalSerdesConfig extends AbstractConfig {
         private ValidSerdesClassList() { /* Intentionally empty constructor */ }
 
         /**
-         * @return a new {@link ValidSerdesClassList} instance.
+         * @return a new ValidSerdesClassList instance.
          */
         public static ValidSerdesClassList getInstance() {
             return new ValidSerdesClassList();
