@@ -84,15 +84,22 @@ public class AutopilotHealthIndicator extends AbstractHealthIndicator {
     private static BiFunction<String, Map<TopicPartition, Long>, Map<String, Object>> getDetails() {
 
         return (thread, partitions) -> {
-            final List<String> partitionDetails =
+            final List<Map<String, Object>> partitionDetails =
                     partitions.entrySet()
                               .stream()
                               .sorted(Map.Entry.comparingByValue())
                               .map(entry -> {
+
                                   final TopicPartition key = entry.getKey();
                                   final Long lag = entry.getValue();
-                                  final String compactLag = numberFormat.format(lag);
-                                  return String.format("[ %s\u0009] %s", compactLag, key);
+
+                                  @SuppressWarnings("UnnecessaryLocalVariable")
+                                  final Map<String, Object> entries = Map.ofEntries(
+                                          Map.entry("partition", "%s".formatted(key)),
+                                          Map.entry("lag", numberFormat.format(lag))
+                                  );
+
+                                  return entries;
                               })
                               .toList();
 
