@@ -17,13 +17,13 @@ Maven
 <dependency>
   <groupId>io.github.leofuso</groupId>
   <artifactId>actuator-kafka-streams</artifactId>
-  <version>v2.7.2.6.RELEASE</version>
+  <version>v2.7.2.8.RELEASE</version>
 </dependency>
 ``` 
 
 Gradle
 ```groovy
-implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.2.6.RELEASE'
+implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.2.8.RELEASE'
 ```
 
 The version indicates the compatibility with the Spring Boot. In other worlds, I'll try to keep it up to date with other
