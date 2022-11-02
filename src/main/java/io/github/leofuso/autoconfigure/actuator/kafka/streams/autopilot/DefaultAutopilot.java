@@ -429,7 +429,7 @@ public class DefaultAutopilot implements Autopilot {
                         continue;
                     }
 
-                    Long lag = Math.abs(endOffset - committedOffset);
+                    final long lag = Math.max(0, endOffset - committedOffset);
                     partitionLag.put(partition, lag);
                 }
             }
