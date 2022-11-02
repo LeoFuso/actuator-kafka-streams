@@ -220,17 +220,17 @@ Optionally, you can import all dependencies by yourself, e.g, if you are using M
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-protobuf</artifactId>
-        <version>1.49.2</version>
+        <version>1.50.2</version>
     </dependency>
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-stub</artifactId>
-        <version>1.49.2</version>
+        <version>1.50.2</version>
     </dependency>
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-netty-shaded</artifactId>
-        <version>1.49.2</version>
+        <version>1.50.2</version>
     </dependency>
 </dependencies>
 
