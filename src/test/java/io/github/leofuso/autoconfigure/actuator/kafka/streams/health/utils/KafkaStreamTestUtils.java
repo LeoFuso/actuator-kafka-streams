@@ -1,15 +1,10 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.health.utils;
 
-import javax.annotation.Nonnull;
 
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.IntStream;
 
 import org.apache.kafka.clients.consumer.Consumer;
@@ -23,8 +18,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
-import org.springframework.util.concurrent.ListenableFuture;
-import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG;
@@ -59,17 +52,9 @@ public abstract class KafkaStreamTestUtils {
         KafkaTemplate<String, String> template = new KafkaTemplate<>(pf, true);
         CountDownLatch latch = new CountDownLatch(records.length);
         for (ProducerRecord<String, String> record : records) {
-            ListenableFuture<SendResult<String, String>> future = template.send(record);
-            future.addCallback(
-                    new ListenableFutureCallback<>() {
-                        @Override
-                        public void onFailure(@Nonnull Throwable e) {throw new RuntimeException(e);}
-
-                        @Override
-                        public void onSuccess(SendResult<String, String> result) {
-                            latch.countDown();
-                        }
-                    });
+            CompletableFuture<SendResult<String, String>> future = template.send(record);
+            future.join();
+            latch.countDown();
         }
         try {
             final boolean await = latch.await(2, TimeUnit.SECONDS);
@@ -90,7 +75,7 @@ public abstract class KafkaStreamTestUtils {
         DefaultKafkaConsumerFactory<String, String> cf = new DefaultKafkaConsumerFactory<>(props);
         try (Consumer<String, String> consumer = cf.createConsumer()) {
             embeddedKafka.consumeFromEmbeddedTopics(consumer, topics);
-            KafkaTestUtils.getRecords(consumer, timeout.toMillis());
+            KafkaTestUtils.getRecords(consumer, timeout);
         }
     }
 

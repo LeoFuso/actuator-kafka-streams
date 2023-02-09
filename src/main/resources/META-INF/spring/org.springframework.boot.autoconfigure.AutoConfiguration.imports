@@ -1,0 +1,8 @@
+io.github.leofuso.autoconfigure.actuator.kafka.streams.KStreamsSupplierAutoConfiguration
+io.github.leofuso.autoconfigure.actuator.kafka.streams.topology.TopologyEndpointAutoConfiguration
+io.github.leofuso.autoconfigure.actuator.kafka.streams.health.KStreamsHealthIndicatorAutoConfiguration
+io.github.leofuso.autoconfigure.actuator.kafka.streams.state.CompositeStateAutoConfiguration
+io.github.leofuso.autoconfigure.actuator.kafka.streams.state.restore.StateRestoreEndpointAutoConfiguration
+io.github.leofuso.autoconfigure.actuator.kafka.streams.state.remote.endpoint.InteractiveQueryEndpointAutoConfiguration
+io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot.AutopilotAutoConfiguration
+io.github.leofuso.autoconfigure.actuator.kafka.streams.restart.RestartEndpointAutoConfiguration

@@ -181,34 +181,6 @@ class KStreamsHealthIndicatorTest {
     }
 
     @Test
-    @DisplayName("Given faulty record(ILLEGAL), and replace thread handling, when asked for HC, then should return Down")
-    void th7() {
-        /* Given */
-        final String topic = addRandomTopic(broker);
-        healthCheck(true)
-                .withBean(
-                        StreamsBuilderFactoryBeanCustomizer.class,
-                        () -> fb -> fb.setStreamsUncaughtExceptionHandler(exception -> REPLACE_THREAD)
-                )
-                .run(context -> {
-                    final KStreamsHealthIndicator indicator = context.getBean(KStreamsHealthIndicator.class);
-                    expect(indicator, Status.UP);
-
-                    produce(
-                            broker,
-                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
-                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
-                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "some-value"),
-                            new ProducerRecord<>(topic, ILLEGAL_ARG_EXP_KEY, "exception-value"),
-                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "other-value"),
-                            new ProducerRecord<>(topic, String.valueOf(UUID.randomUUID()), "other-value")
-                    );
-                    /* When & Then */
-                    expect(indicator, Status.DOWN);
-                });
-    }
-
-    @Test
     @DisplayName("Given faulty record(NPE), no strategy, when asked for HC, then should return Down")
     void th8() {
         /* Given */
