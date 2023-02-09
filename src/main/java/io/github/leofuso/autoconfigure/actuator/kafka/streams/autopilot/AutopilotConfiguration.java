@@ -1,12 +1,13 @@
 package io.github.leofuso.autoconfigure.actuator.kafka.streams.autopilot;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.PositiveOrZero;
+
 
 import java.time.Duration;
 import java.util.regex.Pattern;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
