@@ -17,13 +17,13 @@ Maven
 <dependency>
   <groupId>io.github.leofuso</groupId>
   <artifactId>actuator-kafka-streams</artifactId>
-  <version>v2.7.2.8.RELEASE</version>
+  <version>v2.7.8.0.RELEASE</version>
 </dependency>
 ``` 
 
 Gradle
 ```groovy
-implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.2.8.RELEASE'
+implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.8.0.RELEASE'
 ```
 
 The version indicates the compatibility with the Spring Boot. In other worlds, I'll try to keep it up to date with other
@@ -42,7 +42,7 @@ implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
 Using gradle, optionally, you can enable features individually, e.g.
 ```groovy
-implementation ('io.github.leofuso:actuator-kafka-stream:v2.7.x.y.RELEASE') {
+implementation ('io.github.leofuso:actuator-kafka-stream:v2.8.x.y.RELEASE') {
     capabilities {
         requireCapability 'io.github.leofuso:actuator-kafka-stream-principal'
     }
@@ -220,17 +220,17 @@ Optionally, you can import all dependencies by yourself, e.g, if you are using M
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-protobuf</artifactId>
-        <version>1.50.2</version>
+        <version>1.52.1</version>
     </dependency>
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-stub</artifactId>
-        <version>1.50.2</version>
+        <version>1.52.1</version>
     </dependency>
     <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-netty-shaded</artifactId>
-        <version>1.50.2</version>
+        <version>1.52.1</version>
     </dependency>
 </dependencies>
 
