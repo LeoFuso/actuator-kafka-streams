@@ -17,17 +17,17 @@ Maven
 <dependency>
   <groupId>io.github.leofuso</groupId>
   <artifactId>actuator-kafka-streams</artifactId>
-  <version>v2.7.8.0.RELEASE</version>
+  <version>v3.0.2.0.RELEASE</version>
 </dependency>
 ``` 
 
 Gradle
 ```groovy
-implementation 'io.github.leofuso:actuator-kafka-stream:v2.7.8.0.RELEASE'
+implementation 'io.github.leofuso:actuator-kafka-stream:v3.0.2.0.RELEASE'
 ```
 
 The version indicates the compatibility with the Spring Boot. In other worlds, I'll try to keep it up to date with other
-Spring Boot versions, e.g, the `v2.7.x.y.RELEASE` should be compatible with the Spring Boot `2.7.x` version and so on.
+Spring Boot versions, e.g, the `v3.x.y.z.RELEASE` should be compatible with the Spring Boot `2.7.x` version and so on.
 
 ## Usage
 
@@ -42,7 +42,7 @@ implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
 Using gradle, optionally, you can enable features individually, e.g.
 ```groovy
-implementation ('io.github.leofuso:actuator-kafka-stream:v2.8.x.y.RELEASE') {
+implementation ('io.github.leofuso:actuator-kafka-stream:v3.0.x.y.RELEASE') {
     capabilities {
         requireCapability 'io.github.leofuso:actuator-kafka-stream-principal'
     }
@@ -207,7 +207,7 @@ add `readonlystatestore` and `timestampedreadonlystatestore` endpoint to `manage
 By default, this endpoint is disabled.
 
 ```groovy
-implementation ('io.github.leofuso:actuator-kafka-stream:v2.7.x.y.RELEASE') {
+implementation ('io.github.leofuso:actuator-kafka-stream:v3.0.x.y.RELEASE') {
     capabilities {
         requireCapability 'io.github.leofuso:actuator-kafka-stream-grpc-support'
     }
